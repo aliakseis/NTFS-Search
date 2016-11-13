@@ -200,6 +200,7 @@ typedef struct {
 
 #define UNKNOWN 0xff99ff99
 
+/*
 typedef struct
 {
 	LPCWSTR FileName;
@@ -256,6 +257,17 @@ typedef struct
 	DWORD FileAttributes;
 	DWORD Attributes;
 }LONGFILEINFO, *PLONGFILEINFO;
+*/
+
+typedef struct {
+    LPCWSTR FileName;
+    USHORT FileNameLength;
+    USHORT Flags;
+    ULARGE_INTEGER ParentId;
+
+    char data[64];
+}SEARCHFILEINFO, *PSEARCHFILEINFO;
+
 
 typedef struct {
 	HANDLE fileHandle;
@@ -285,13 +297,15 @@ typedef struct {
 		} FAT;
 
 
+        SEARCHFILEINFO *fFiles;
+        /*
 		union
 		{
 			LONGFILEINFO *lFiles;
 			SHORTFILEINFO *sFiles;
 			SEARCHFILEINFO *fFiles;
 		};
-
+        */
 	};
 }DISKHANDLE, *PDISKHANDLE;
 
@@ -334,7 +348,7 @@ DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info);
 
 LPWSTR GetPath(PDISKHANDLE disk, int id);
 LPWSTR GetCompletePath(PDISKHANDLE disk, int id);
-DWORD FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER fh, PUCHAR data);
+BOOL FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER fh, SEARCHFILEINFO* data);
 
 ULONG RunLength(PUCHAR run);
 LONGLONG RunLCN(PUCHAR run);

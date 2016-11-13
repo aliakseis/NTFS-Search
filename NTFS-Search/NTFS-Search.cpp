@@ -581,7 +581,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			hdr = (LPNMHDR) lParam;
 			if (hdr->hwndFrom == hListView)
 			{
-				int len;
+				//int len;
 				switch( hdr->code )
 				{
 					case NM_DBLCLK:
@@ -749,7 +749,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				if (index>=0)
 				{
 					POINTS pt;
-					POINT pt2;
+					//POINT pt2;
 					RECT rt,rt2;
 					DWORD dw;
 					
@@ -1067,7 +1067,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 	int last;
 	int hit=0;
 	LVITEM item;
-	PUCHAR data;
+	//PUCHAR data;
 	WCHAR tmp[0xffff];
 	SEARCHFILEINFO *info;
 	int len=0;
@@ -1140,7 +1140,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 					hit++;
 					if (results_cnt > 0xfff0) 
 					{
-						int res;
+						//int res;
 						//res = MessageBox(0, TEXT("Your search produces too many results!\nContinue your search?"), 0, MB_ICONINFORMATION | MB_TASKMODAL | MB_YESNO);
 						MessageBox(hWnd, &szTooMany[0]/*TEXT("Your search produces too many results!")*/, 0, MB_ICONWARNING |MB_OK);
 						//if (res!=IDYES)
@@ -1217,7 +1217,7 @@ UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags)
 
 BOOL UnloadDisk(HWND hWnd, int index)
 {
-	PUCHAR data;
+	//PUCHAR data;
 
 	if (disks[index]!=NULL)
 	{
@@ -1410,7 +1410,7 @@ BOOL ProcessPopupMenu(HWND hWnd, int index, DWORD item)
 void PrepareCopy(HWND hWnd, UINT flags)
 {
 	DWORD datasize=0;
-	STGMEDIUM stg;
+	//STGMEDIUM stg;
 	DROPFILES files;
 	int newline;
 	int structsize;
@@ -1639,7 +1639,7 @@ DWORD ShowError()
     // Retrieve the system error message for the last-error code
 
     LPVOID lpMsgBuf;
-    LPVOID lpDisplayBuf;
+    //LPVOID lpDisplayBuf;
     DWORD dw = GetLastError(); 
 
     FormatMessage(

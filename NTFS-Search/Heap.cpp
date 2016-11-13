@@ -119,8 +119,7 @@ BOOL ReUseBlocks(PHEAPBLOCK block, BOOL clear)
 {
 	if (block!=NULL)
 	{
-		PHEAPBLOCK tmp, back;
-		tmp = block;
+		PHEAPBLOCK tmp = block;
 		while (tmp!=NULL)
 		{
 			tmp->current = 0;	
