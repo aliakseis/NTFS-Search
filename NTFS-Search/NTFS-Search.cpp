@@ -84,16 +84,16 @@ VOID ReleaseAllDisks();
 
 //Controls
 HWND hEdit, hListView, hCheck1, hCheck2, hGroup, hStatus, hCombo;
-HWND glDlg=NULL;
+HWND glDlg=nullptr;
 // Forward declarations of functions included in this code module:
 ATOM				MyRegisterClass(HINSTANCE hInstance);
-BOOL				InitInstance(HINSTANCE, int);
-LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	Help(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK	Waiting(HWND, UINT, WPARAM, LPARAM);
+BOOL				InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/);
+LRESULT CALLBACK	WndProc(HWND /*hWnd*/, UINT /*message*/, WPARAM /*wParam*/, LPARAM /*lParam*/);
+INT_PTR CALLBACK	About(HWND /*hDlg*/, UINT /*message*/, WPARAM /*wParam*/, LPARAM /*lParam*/);
+INT_PTR CALLBACK	Help(HWND /*hDlg*/, UINT /*message*/, WPARAM /*wParam*/, LPARAM /*lParam*/);
+INT_PTR CALLBACK	Waiting(HWND /*hDlg*/, UINT /*message*/, WPARAM /*wParam*/, LPARAM /*lParam*/);
 
-LRESULT CALLBACK	SearchDlg( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam );
+LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam );
 void StartLoading(PDISKHANDLE disk, HWND hWnd);
 int ProcessLoading(HWND hWnd, HWND hCombo, int reload);
 
@@ -101,7 +101,7 @@ DWORD WINAPI LoadSearchInfo(LPVOID lParam);
 int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEARCHP* pat);
 int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted);
 UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags);
-UINT ExecuteFileEx(HWND hWnd, LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags);
+UINT ExecuteFileEx(HWND hWnd, const LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags);
 
 BOOL UnloadDisk(HWND hWnd, int index);
 BOOL SearchString(LPWSTR pattern, int length, LPWSTR string, int len);
@@ -132,7 +132,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
-	// TODO: Place code here.
+	// TODO(Aliaksei Sanko): Place code here.
 	MSG msg;
 	HACCEL hAccelTable;
 
@@ -174,7 +174,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	PathStrings = CreateHeap(0xfff*MAX_PATH);
 
 	// Perform application initialization:
-	if (!InitInstance (hInstance, nCmdShow))
+	if (InitInstance (hInstance, nCmdShow) == 0)
 	{
 		return FALSE;
 	}
@@ -182,7 +182,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_NTFSEARCH));
 
 	// Main message loop:
-	while (GetMessage(&msg, NULL, 0, 0))
+	while (GetMessage(&msg, nullptr, 0, 0))
 	{
 		//IsDialogMessage(msg.hwnd, &msg);
 		if (!TranslateAccelerator(glDlg, hAccelTable, &msg))
@@ -196,7 +196,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	FreeHeap(FileStrings);
 
 	//Beep(2500,150);
-	return (int) msg.wParam;
+	return static_cast<int>(msg.wParam);
 }
 
 
@@ -226,7 +226,7 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.cbWndExtra		= 0;
 	wcex.hInstance		= hInstance;
 	wcex.hIcon			= LoadIcon(hInstance, MAKEINTRESOURCE(IDI_NTFSEARCH));
-	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
+	wcex.hCursor		= LoadCursor(nullptr, IDC_ARROW);
 	wcex.hbrBackground	= (HBRUSH)(COLOR_3DFACE+1);
 	wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_NTFSEARCH);
 	wcex.lpszClassName	= szWindowClass;
@@ -252,9 +252,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    hInst = hInstance; // Store instance handle in our global variable
 
    hWnd = CreateWindow(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-	  CW_USEDEFAULT, 0, 0, 0, NULL, NULL, hInstance, NULL);
+	  CW_USEDEFAULT, 0, 0, 0, nullptr, nullptr, hInstance, nullptr);
 
-   if (!hWnd)
+   if (hWnd == nullptr)
    {
 	  return FALSE;
    }
@@ -309,7 +309,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	SetMenuDefaultItem(hm, 0, TRUE);
 
 	//CreateDialogParam(hInst, (LPCTSTR)IDD_SEARCH, NULL, (DLGPROC)SearchDlg,0);
-	DialogBox(hInst, MAKEINTRESOURCE(IDD_SEARCH), NULL, (DLGPROC)SearchDlg);
+	DialogBox(hInst, MAKEINTRESOURCE(IDD_SEARCH), nullptr, (DLGPROC)SearchDlg);
 
 	DestroyWindow(hWnd);			
 
@@ -355,7 +355,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
-		// TODO: Add any drawing code here...
+		// TODO(Aliaksei Sanko): Add any drawing code here...
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_DESTROY:
@@ -378,17 +378,17 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_INITDIALOG:
-		return (INT_PTR)TRUE;
+		return static_cast<INT_PTR>(TRUE);
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			return static_cast<INT_PTR>(TRUE);
 		}
 		break;
 	}
-	return (INT_PTR)FALSE;
+	return static_cast<INT_PTR>(FALSE);
 }
 
 // Help handler
@@ -406,7 +406,7 @@ INT_PTR CALLBACK Help(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		SendDlgItemMessage(hDlg, IDC_LIST1, LB_ADDSTRING, 0, (LPARAM) TEXT("Any*Text - Use*Data"));
 		SendDlgItemMessage(hDlg, IDC_LIST1, LB_ADDSTRING, 0, (LPARAM) TEXT(""));
 		glHelp = TRUE;
-		return (INT_PTR)TRUE;
+		return static_cast<INT_PTR>(TRUE);
 	case WM_MEASUREITEM:
 		{
 			LPMEASUREITEMSTRUCT item;
@@ -418,7 +418,7 @@ INT_PTR CALLBACK Help(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		{
 			LPDRAWITEMSTRUCT item;
 			item = (LPDRAWITEMSTRUCT) lParam;
-			if (item->itemAction & ODA_DRAWENTIRE)
+			if ((item->itemAction & ODA_DRAWENTIRE) != 0u)
 			{
 				DrawText(item->hDC, (TCHAR*)item->itemData, wcslen((TCHAR*)item->itemData), &item->rcItem, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
 			}
@@ -428,14 +428,14 @@ INT_PTR CALLBACK Help(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			return static_cast<INT_PTR>(TRUE);
 		}
 		break;
 	case WM_DESTROY:
 		glHelp = FALSE;
 		break;
 	}
-	return (INT_PTR)FALSE;
+	return static_cast<INT_PTR>(FALSE);
 }
 
 
@@ -446,7 +446,6 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 	TCHAR data;
 	int b;
 	DWORD loaded;
-	LONG_PTR pt;
 			
 	static TCHAR tmp[MAX_PATH];
 	static TCHAR path[0xffff];
@@ -466,13 +465,13 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			{
 				//Proceed.
 				ListView_SetExtendedListViewStyle(hListView, LVS_EX_DOUBLEBUFFER);
-				hStatus = CreateWindowEx(WS_EX_COMPOSITED, STATUSCLASSNAME , NULL, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP , 20, 20, 100, 100, hWnd, NULL, hInst, NULL);
+				hStatus = CreateWindowEx(WS_EX_COMPOSITED, STATUSCLASSNAME , nullptr, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP , 20, 20, 100, 100, hWnd, nullptr, hInst, nullptr);
 			
 			}
 			else
 			{
 				// Use an alternate approach for older DLL versions.
-				hStatus = CreateWindowEx(0, STATUSCLASSNAME , NULL, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP , 20, 20, 100, 100, hWnd, NULL, hInst, NULL);
+				hStatus = CreateWindowEx(0, STATUSCLASSNAME , nullptr, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP , 20, 20, 100, 100, hWnd, nullptr, hInst, nullptr);
 			
 			}
 
@@ -527,7 +526,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 			for (int i = 0; i<32; i++)
 			{
-				if ((drives >> (i)) & 0x1)
+				if (((drives >> (i)) & 0x1) != 0u)
 				{
 					
 					TCHAR str[5];
@@ -569,7 +568,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			GetWindowRect(hStatus, &rt);
 			GetWindowRect(hCombo, &rt2);
 			rt2.bottom +=12;
-			MapWindowPoints(NULL, hWnd,(LPPOINT) &rt2, 2);
+			MapWindowPoints(nullptr, hWnd,reinterpret_cast<LPPOINT>(&rt2), 2);
 			MoveWindow(hListView, 0, (rt2.bottom) + 20, width, height - (rt.bottom-rt.top)-(rt2.bottom+20) , TRUE);
 			
 
@@ -596,9 +595,8 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						
 						break;
 					case LVN_DELETEALLITEMS:
-						pt = TRUE;
 						SetLastError(0);
-						SetWindowLong(hWnd, DWL_MSGRESULT, pt);
+						SetWindowLong(hWnd, DWL_MSGRESULT, TRUE);
 						return TRUE;
 					case LVN_DELETEITEM:
 						Beep(2500,5);
@@ -608,12 +606,13 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						break;
 					case LVN_ODFINDITEM:
 						NMLVFINDITEM *finditem;
+                        LONG_PTR pt;
 
 									
-						TCHAR stmp[2], stmp2[2];
 						finditem = (NMLVFINDITEM*) lParam;
-						 if (finditem->lvfi.flags & LVFI_STRING)
+						 if ((finditem->lvfi.flags & LVFI_STRING) != 0u)
 						{
+                            TCHAR stmp[2], stmp2[2];
 							stmp[0] = finditem->lvfi.psz[0];
 							stmp[1] = 0;
 							stmp2[1] = 0;
@@ -621,8 +620,10 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 							int j=0;
 							for (int i=finditem->iStart;i!=finditem->iStart-1;i++)
 							{
-								if (j>=results_cnt) break;
-								if (i>=results_cnt) i = 0;
+								if (j>=results_cnt) { break;
+}
+								if (i>=results_cnt) { i = 0;
+}
 								stmp2[0] = results[i].filename[0];
 								CharLower(stmp2);
 								if (stmp[0]==stmp2[0])
@@ -647,17 +648,18 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						{
 							res = &results[info->item.iItem];//(SearchResult*) &SearchResults->data[info->item.iItem*sizeof(SearchResult)];
 
-							if (info->item.mask & LVIF_TEXT)
+							if ((info->item.mask & LVIF_TEXT) != 0u)
 							{
-								if (info->item.iSubItem==0)
-									info->item.pszText = (LPTSTR)res->filename;
-								else if (info->item.iSubItem==1)
-									info->item.pszText = (LPTSTR)res->extra;
-								else
-									info->item.pszText = (LPTSTR)res->path;
+								if (info->item.iSubItem==0) {
+									info->item.pszText = res->filename;
+								} else if (info->item.iSubItem==1) {
+									info->item.pszText = res->extra;
+								} else {
+									info->item.pszText = res->path;
+}
 							}
 
-							if (info->item.mask & LVIF_IMAGE)
+							if ((info->item.mask & LVIF_IMAGE) != 0u)
 							{
 								info->item.iImage = res->icon;
 							}
@@ -683,7 +685,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						{
 							qsort((void*) &results[0], results_cnt, sizeof(SearchResult), pathcompare);
 						}
-						InvalidateRect(listitem->hdr.hwndFrom, NULL, TRUE);
+						InvalidateRect(listitem->hdr.hwndFrom, nullptr, TRUE);
 						break;
 				}	
 			}
@@ -703,7 +705,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				data = SendMessage(hCombo, CB_GETITEMDATA, i, 0);
 				if (data > 0 && data < 32)
 				{
-					if (disks[data] != NULL)
+					if (disks[data] != nullptr)
 					{
 						if (disks[data]->filesSize!=0)
 						{
@@ -738,7 +740,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					}
 				}
 			}
-			InvalidateRect(hCombo, NULL, TRUE);
+			InvalidateRect(hCombo, nullptr, TRUE);
 			wsprintf(tmp, &szTotal[0]/*TEXT("%d entries total")*/, loaded);
 			SendMessage(hStatus, SB_SETTEXT, 1, (LPARAM) tmp);
 			break;
@@ -761,10 +763,11 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						dw = ListView_GetTopIndex(hListView);
 						dw = index - dw;
 
-						dw = TrackPopupMenu(hm, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, rt2.left + rt.right , rt2.top + (rt.bottom -rt.top)*(dw+1), 0, hWnd, NULL);
+						dw = TrackPopupMenu(hm, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, rt2.left + rt.right , rt2.top + (rt.bottom -rt.top)*(dw+1), 0, hWnd, nullptr);
 					}
-					else
-						dw = TrackPopupMenu(hm, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, pt.x, pt.y, 0, hWnd, NULL);
+					else {
+						dw = TrackPopupMenu(hm, TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD, pt.x, pt.y, 0, hWnd, nullptr);
+}
 					ProcessPopupMenu(hWnd, index, dw);
 				}
 			}
@@ -778,7 +781,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				EnableWindow(GetDlgItem(hWnd, IDOK),TRUE);
 				break;
 			}
-			else if (id==IDM_CLEAR)
+			if (id==IDM_CLEAR)
 			{
 				ListView_DeleteAllItems(hListView);
 				EnableWindow(GetDlgItem(hWnd, IDOK),TRUE);
@@ -802,8 +805,9 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				of.lpstrTitle = szSaveRes;//TEXT("Save results");
 				if (GetSaveFileName(&of)!=0)
 				{
-					if (SaveResults(of.lpstrFile)==FALSE)
-						MessageBox(hWnd, szSaveResErr /*TEXT("The results couldn't be saved.")*/, 0, MB_ICONERROR);
+					if (SaveResults(of.lpstrFile)==FALSE) {
+						MessageBox(hWnd, szSaveResErr /*TEXT("The results couldn't be saved.")*/, nullptr, MB_ICONERROR);
+}
 				}
 			}
 			else if(id==ID_HELP)
@@ -838,10 +842,11 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					
 					
 					b = SendDlgItemMessage(hWnd, IDC_DELETED, BM_GETCHECK, 0, 0);
-					if (b==BST_CHECKED)
+					if (b==BST_CHECKED) {
 						res = Search(hWnd, data, tmp, FALSE);
-					else
+					} else {
 						res = Search(hWnd, data, tmp, TRUE);
+}
 					
 					wsprintf(tmp,&szFound[0]/* TEXT("%d files found.")*/, res);
 					SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM) tmp);
@@ -858,7 +863,7 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				}
 				break;
 			}
-			else if (id==IDC_UNLOAD && msg==BN_CLICKED)
+			if (id==IDC_UNLOAD && msg==BN_CLICKED)
 			{
 				index = SendMessage(hCombo, CB_GETCURSEL, 0, 0);
 				data = SendMessage(hCombo, CB_GETITEMDATA, index, 0);
@@ -890,8 +895,9 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				{
 					glSensitive = TRUE;
 				}
-				else
+				else {
 					glSensitive = FALSE;
+}
 			}
 			else if (msg==EN_CHANGE)
 			{
@@ -916,7 +922,8 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			}
 			break;
 		case WM_HELP:
-			if (!glHelp)DialogBox(hInst, MAKEINTRESOURCE(IDD_HELP), hWnd, Help);
+			if (glHelp == 0) {DialogBox(hInst, MAKEINTRESOURCE(IDD_HELP), hWnd, Help);
+}
 			
 			break;
 	}
@@ -925,22 +932,22 @@ LRESULT CALLBACK	SearchDlg( HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 DWORD WINAPI LoadSearchInfo(LPVOID lParam)
 {
-	DWORD res;
 	STATUSINFO status;
 	ThreadInfo* info;
-	info = (ThreadInfo*) (lParam);
+	info = static_cast<ThreadInfo*>(lParam);
 	status.Value = PBM_SETPOS;
 	status.hWnd = GetDlgItem(info->hWnd, IDC_PROGRESS);
 	if (info->disk->filesSize==0)
 	{
-		if (res = LoadMFT(info->disk, FALSE)!=0)
+        DWORD res;
+        if (res = static_cast<DWORD>(static_cast<unsigned int>(LoadMFT(info->disk, FALSE)!=0) != 0u) != 0u)
 		{
 			SendDlgItemMessage(info->hWnd, IDC_PROGRESS, PBM_SETRANGE32, 0, info->disk->NTFS.entryCount);
 			ParseMFT(info->disk, SEARCHINFO, &status);
 		}
 		else if (res==3)
 		{
-			MessageBox(info->hWnd,szStrange,NULL,MB_ICONERROR); 
+			MessageBox(info->hWnd,szStrange,nullptr,MB_ICONERROR); 
 		}
 	}
 	else
@@ -955,7 +962,7 @@ DWORD WINAPI LoadSearchInfo(LPVOID lParam)
 
 void StartLoading(PDISKHANDLE disk, HWND hWnd)
 {
-	DialogBoxParam(hInst, (LPCTSTR)IDD_WAIT, hWnd, (DLGPROC)Waiting, (LPARAM)disk);
+	DialogBoxParam(hInst, (LPCTSTR)IDD_WAIT, hWnd, static_cast<DLGPROC>(Waiting), (LPARAM)disk);
 }
 
 INT_PTR CALLBACK Waiting(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
@@ -977,17 +984,17 @@ INT_PTR CALLBACK Waiting(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			SetWindowText(hDlg, tmp);
 			range = SendDlgItemMessage(hDlg, IDC_PROGRESS,PBM_GETRANGE,  TRUE, NULL);
 			//handle = CreateThread(NULL, 0, LoadSearchInfo, (LPVOID) &info, 0, &threadId); 
-			handle = (HANDLE)_beginthreadex(NULL, 0, (unsigned int(__stdcall*)(void*))LoadSearchInfo, (LPVOID) &info, 0, (unsigned int*)&threadId); 
+			handle = (HANDLE)_beginthreadex(nullptr, 0, reinterpret_cast<unsigned int(__stdcall*)(void*)>(LoadSearchInfo), (LPVOID) &info, 0, reinterpret_cast<unsigned int*>(&threadId)); 
 			
 			CloseHandle(handle);
 		}
-		return (INT_PTR)TRUE;
+		return static_cast<INT_PTR>(TRUE);
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			return static_cast<INT_PTR>(TRUE);
 		}
 		break;
 	case WM_USER+1:
@@ -995,7 +1002,7 @@ INT_PTR CALLBACK Waiting(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		hWnd = GetParent(hDlg);
 		//DWORD pos;
 		//pos = SendDlgItemMessage(hDlg, IDC_PROGRESS, PBM_GETPOS, 0, 0);
-		if (hWnd!=NULL)
+		if (hWnd!=nullptr)
 		{
 			PostMessage(hWnd, WM_USER+2, 0, 0);
 		}
@@ -1003,15 +1010,16 @@ INT_PTR CALLBACK Waiting(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		return TRUE;
 		break;
 	}
-	return (INT_PTR)FALSE;
+	return static_cast<INT_PTR>(FALSE);
 }
 
 VOID ReleaseAllDisks()
 {
-	for (int i=0;i<32;i++)
+	for (auto & disk : disks)
 	{
-		if (disks[i]!=NULL)
-			CloseDisk(disks[i]);
+		if (disk!=nullptr) {
+			CloseDisk(disk);
+}
 	}
 }
 
@@ -1032,28 +1040,30 @@ int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted)
 
 	
 	pat = StartSearch(filename, wcslen(filename));
-	if (pat==NULL) return 0;
+	if (pat==nullptr) { return 0;
+}
 
 
 	if (disk>0 && disk <32)
 	{
-		if (disks[disk]!=NULL)
+		if (disks[disk]!=nullptr)
 		{
 			ret = SearchFiles(hWnd, disks[disk], filename, deleted, pat);
 		}
 	}
 	else
 	{
-		for (int i=0;i<32;i++)
+		for (auto & disk : disks)
 		{
-			if (disks[i]!=NULL && results_cnt < 0xfff0)
+			if (disk!=nullptr && results_cnt < 0xfff0)
 			{
-				ret += SearchFiles(hWnd, disks[i], filename, deleted, pat);
+				ret += SearchFiles(hWnd, disk, filename, deleted, pat);
 			}
 		}
 	}
-	if (ret!=results_cnt)
+	if (ret!=results_cnt) {
 		DebugBreak();
+}
 	results_cnt = ret;
 	ListView_SetItemCountEx(hListView, results_cnt, 0);
 	SendMessage(hListView, WM_SETREDRAW,TRUE,0);
@@ -1064,7 +1074,6 @@ int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted)
 
 int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEARCHP* pat)
 {
-	int last;
 	int hit=0;
 	LVITEM item;
 	//PUCHAR data;
@@ -1072,7 +1081,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 	SEARCHFILEINFO *info;
 	int len=0;
 	int res = 0;
-	if (!glSensitive)
+	if (glSensitive == 0)
 	{
 		_wcslwr(filename);
 	}
@@ -1084,11 +1093,11 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 	
 	for (int i = 0;i<disk->filesSize;i++)
 	{		
- 		if (deleted==TRUE || (info[i].Flags & 0x1))
+ 		if (deleted==TRUE || ((info[i].Flags & 0x1) != 0))
 		{
-			if (info[i].FileName!=NULL)
+			if (info[i].FileName!=nullptr)
 			{
-				if (!glSensitive)
+				if (glSensitive == 0)
 				{
 					//MessageBox(0,PSEARCHFILEINFO(data)->FileName,0,0);
 					//wcscpy_s(tmp,info->FileName, info->FileNameLength);
@@ -1098,7 +1107,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 				}
 				else
 				{
-					res = SearchStr(pat, (wchar_t*)info[i].FileName, info[i].FileNameLength);
+					res = SearchStr(pat, const_cast<wchar_t*>(info[i].FileName), info[i].FileNameLength);
 				}
 				if (res == TRUE)
 				//if (wcsstr(tmp, filename)!=NULL)
@@ -1111,17 +1120,18 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 					int s;
 					t = GetPath(disk, i);
 					s = wcslen(t);
-					res->filename = (LPTSTR) info[i].FileName;
+					res->filename = const_cast<LPTSTR>(info[i].FileName);
 					res->path = AllocAndCopyString(PathStrings, t, s);
 					res->icon = info[i].Flags;
 					LPTSTR ret;
-					if (!(info[i].Flags & 0x002))
+					if ((info[i].Flags & 0x002) == 0)
 					{
 						ret = wcsrchr(res->filename, L'.');
-						if (ret!=NULL)
+						if (ret!=nullptr) {
 							res->extra = ret+1;
-						else
+						} else {
 							res->extra = TEXT(" ");
+}
 					}
 					else
 					{
@@ -1132,7 +1142,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 					item.iImage = PSEARCHFILEINFO(data)->Flags;
 					item.lParam = (LPARAM)res;
 					*/
-					last = ListView_InsertItem(hListView, &item);
+					auto last = ListView_InsertItem(hListView, &item);
 
 					//swprintf(tmp,L"%u",i);
 				//	ListView_SetItemText(hListView,last,1, LPSTR_TEXTCALLBACK);
@@ -1142,7 +1152,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 					{
 						//int res;
 						//res = MessageBox(0, TEXT("Your search produces too many results!\nContinue your search?"), 0, MB_ICONINFORMATION | MB_TASKMODAL | MB_YESNO);
-						MessageBox(hWnd, &szTooMany[0]/*TEXT("Your search produces too many results!")*/, 0, MB_ICONWARNING |MB_OK);
+						MessageBox(hWnd, &szTooMany[0]/*TEXT("Your search produces too many results!")*/, nullptr, MB_ICONWARNING |MB_OK);
 						//if (res!=IDYES)
 						//{
 							//SendMessage(hListView, WM_SETREDRAW,TRUE,0);						
@@ -1170,13 +1180,13 @@ UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags)
 	shell.cbSize = sizeof(SHELLEXECUTEINFO);
 	shell.lpFile = str;
 	shell.fMask = SEE_MASK_INVOKEIDLIST;
-	shell.lpVerb = NULL;
+	shell.lpVerb = nullptr;
 	shell.nShow = SW_SHOWDEFAULT;
 	
 
-	if (!(flags & 0x001))
+	if ((flags & 0x001) == 0)
 	{
-		MessageBox(hWnd, szDeletedFile /*TEXT("The file is deleted and cannot be accessed throught the filesystem driver.\nUse a recover program to get access to the stored data.")*/, 0, MB_ICONWARNING);
+		MessageBox(hWnd, szDeletedFile /*TEXT("The file is deleted and cannot be accessed throught the filesystem driver.\nUse a recover program to get access to the stored data.")*/, nullptr, MB_ICONWARNING);
 		return 0;
 	}
 
@@ -1186,13 +1196,13 @@ UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags)
 	switch(res)
 	{
 		case SE_ERR_NOASSOC:
-			ShellExecute(0,TEXT("openas"), str, NULL, NULL, SW_SHOWDEFAULT);
+			ShellExecute(nullptr,TEXT("openas"), str, nullptr, nullptr, SW_SHOWDEFAULT);
 			break;
 		case SE_ERR_ASSOCINCOMPLETE:
 
 			break;
 		case SE_ERR_ACCESSDENIED:
-			MessageBox(hWnd, szAccessDenied, 0, MB_ICONERROR);
+			MessageBox(hWnd, szAccessDenied, nullptr, MB_ICONERROR);
 			break;
 		case ERROR_PATH_NOT_FOUND:
 			//MessageBox(hWnd, TEXT("The path coulnd't be found.\nPropably the path is hidden."), 0, MB_ICONWARNING);
@@ -1219,7 +1229,7 @@ BOOL UnloadDisk(HWND hWnd, int index)
 {
 	//PUCHAR data;
 
-	if (disks[index]!=NULL)
+	if (disks[index]!=nullptr)
 	{
 		/*data = (PUCHAR) disks[index]->sFiles;
 		for (int i=0;i<disks[index]->filesSize;i++)
@@ -1229,14 +1239,14 @@ BOOL UnloadDisk(HWND hWnd, int index)
 			data +=disks[index]->IsLong;
 		}*/
 		CloseDisk(disks[index]);
-		disks[index] = NULL;
+		disks[index] = nullptr;
 		SendMessage(hWnd, WM_USER+2, 0, 0);
 		return TRUE;
 	}
 	return FALSE;
 }
 
-UINT ExecuteFileEx(HWND hWnd, LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags)
+UINT ExecuteFileEx(HWND hWnd, const const LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags)
 {
 	UINT res;
 	SHELLEXECUTEINFO shell;
@@ -1249,9 +1259,9 @@ UINT ExecuteFileEx(HWND hWnd, LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show
 	shell.nShow = show;
 	shell.lpDirectory = dir;
 
-	if (!(flags & 0x001))
+	if ((flags & 0x001) == 0)
 	{
-		MessageBox(hWnd, szDeletedFile/*TEXT("The file is deleted and cannot be accessed throught the filesystem driver.\nUse a recover program to get access to the stored data.")*/, 0, MB_ICONWARNING);
+		MessageBox(hWnd, szDeletedFile/*TEXT("The file is deleted and cannot be accessed throught the filesystem driver.\nUse a recover program to get access to the stored data.")*/, nullptr, MB_ICONWARNING);
 		return 0;
 	}
 
@@ -1261,13 +1271,13 @@ UINT ExecuteFileEx(HWND hWnd, LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show
 	switch(res)
 	{
 		case SE_ERR_NOASSOC:
-			ShellExecute(0,TEXT("openas"), str, NULL, NULL, SW_SHOWDEFAULT);
+			ShellExecute(nullptr,TEXT("openas"), str, nullptr, nullptr, SW_SHOWDEFAULT);
 			break;
 		case SE_ERR_ASSOCINCOMPLETE:
 
 			break;
 		case SE_ERR_ACCESSDENIED:
-			MessageBox(hWnd, szAccessDenied, 0, MB_ICONERROR);
+			MessageBox(hWnd, szAccessDenied, nullptr, MB_ICONERROR);
 			break;
 		case ERROR_PATH_NOT_FOUND:
 			//MessageBox(hWnd, TEXT("The path coulnd't be found.\nPropably the path is hidden."), 0, MB_ICONWARNING);
@@ -1323,23 +1333,26 @@ BOOL SaveResults(LPWSTR filename)
 	bool error = false;
 	DWORD written;
 	TCHAR buff[0xffff];
-	file = CreateFile(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+	file = CreateFile(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
 
-	if (file==INVALID_HANDLE_VALUE)
+	if (file==INVALID_HANDLE_VALUE) {
 		return FALSE;
+}
 
 	for (int i=0;i<results_cnt;i++)
 	{
 		wcscpy(buff, results[i].path);
 		wcscat(buff, results[i].filename);
 		wcscat(buff, TEXT("\r\n"));
-		if (WriteFile(file, buff, wcslen(buff)*sizeof(TCHAR), &written, NULL)!=TRUE)
+		if (WriteFile(file, buff, wcslen(buff)*sizeof(TCHAR), &written, nullptr)!=TRUE) {
 			error = true;
+}
 	}
 
 	CloseHandle(file);
-	if (error == true)
+	if (error) {
 		return FALSE;
+}
 	return TRUE;
 }
 
@@ -1363,7 +1376,7 @@ BOOL ProcessPopupMenu(HWND hWnd, int index, DWORD item)
 		wcscpy(&path[len], results[index].filename);
 		len += wcslen(path);
 		path[len] = 0;
-		ExecuteFileEx(hWnd, NULL, path,results[index].path, SW_MINIMIZE, results[index].icon);
+		ExecuteFileEx(hWnd, nullptr, path,results[index].path, SW_MINIMIZE, results[index].icon);
 		
 		break;
 	case IDM_OPENWITH:
@@ -1440,29 +1453,29 @@ void PrepareCopy(HWND hWnd, UINT flags)
 
 	TCHAR *buff;
 
-	buff = (TCHAR*)malloc(0x100000);
-	UINT mask;
+	buff = static_cast<TCHAR*>(malloc(0x100000));
 	int len;
 	for (int i=0;i<results_cnt;i++)
 	{
-		mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
-		if (mask & LVIS_SELECTED && results[i].icon & 0x001)
+		UINT mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
+		if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
 		{
 			wcscpy(&buff[datasize], results[i].path);
 			len = wcslen(&buff[datasize]);
 			wcscpy(&buff[datasize+len], results[i].filename);
 			len += wcslen(&buff[datasize+len]);
 			
-			if (flags==FILES)
+			if (flags==FILES) {
 				buff[datasize+len] = 0;
-			else
+			} else
 			{
 				buff[datasize+len] = L'\r';
 				buff[datasize+len+1] = L'\n';
 				datasize+=1;
 			}
 			datasize+=len+1;
-			if (datasize>0x7fff0) break;
+			if (datasize>0x7fff0) { break;
+}
 		}
 	}
 	buff[datasize] = 0;
@@ -1484,13 +1497,13 @@ void PrepareCopy(HWND hWnd, UINT flags)
 	CopyMemory(PUCHAR(ptr)+structsize, buff, datasize*sizeof(TCHAR));
 	GlobalUnlock(hdrop);
 
-	if (OpenClipboard(hWnd))
+	if (OpenClipboard(hWnd) != 0)
 	{
-		if (EmptyClipboard())
+		if (EmptyClipboard() != 0)
 		{
 			if (flags==FILES)
 			{
-				if (!SetClipboardData(CF_HDROP, hdrop))
+				if (SetClipboardData(CF_HDROP, hdrop) == nullptr)
 				{
 					//GlobalFree(stg.hGlobal);
 					GlobalFree(hdrop);
@@ -1498,7 +1511,7 @@ void PrepareCopy(HWND hWnd, UINT flags)
 			}
 			else
 			{
-				if (!SetClipboardData(CF_UNICODETEXT, hdrop))
+				if (SetClipboardData(CF_UNICODETEXT, hdrop) == nullptr)
 				{
 					GlobalFree(hdrop);
 				}
@@ -1536,7 +1549,7 @@ void DeleteFiles(HWND hWnd, UINT flags)
 		for (int i=0;i<results_cnt;i++)
 		{
 			mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
-			if (mask & LVIS_SELECTED && results[i].icon & 0x001)
+			if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
 			{
 				wcscpy(path, results[i].path);
 				len = wcslen(path);
@@ -1553,8 +1566,9 @@ void DeleteFiles(HWND hWnd, UINT flags)
 						ShowError();
 					}
 				}
-				else if (res==IDCANCEL)
+				else if (res==IDCANCEL) {
 					break;
+}
 			}	
 		}
 	}
@@ -1563,7 +1577,7 @@ void DeleteFiles(HWND hWnd, UINT flags)
 		for (int i=0;i<results_cnt;i++)
 		{
 			mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
-			if (mask & LVIS_SELECTED && results[i].icon & 0x001)
+			if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
 			{
 				wcscpy(path, results[i].path);
 				len = wcslen(path);
@@ -1575,13 +1589,14 @@ void DeleteFiles(HWND hWnd, UINT flags)
 				res = MessageBox(hWnd, buff, szWarning/*TEXT("WARNING")*/, MB_YESNOCANCEL |MB_ICONWARNING | MB_DEFBUTTON2);
 				if (res==IDYES)
 				{
-					if (!MoveFileEx(path, NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
+					if (!MoveFileEx(path, nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))
 					{
 						ShowError();
 					}
 				}
-				else if (res==IDCANCEL)
+				else if (res==IDCANCEL) {
 					break;
+}
 			}	
 		}
 
@@ -1602,18 +1617,18 @@ DWORD GetDllVersion(LPCTSTR lpszDllName)
        tested to ensure that it is a fully qualified path before it is used. */
     hinstDll = LoadLibrary(lpszDllName);
 	
-    if(hinstDll)
+    if(hinstDll != nullptr)
     {
         DLLGETVERSIONPROC pDllGetVersion;
-        pDllGetVersion = (DLLGETVERSIONPROC)GetProcAddress(hinstDll, 
-                          "DllGetVersion");
+        pDllGetVersion = reinterpret_cast<DLLGETVERSIONPROC>(GetProcAddress(hinstDll, 
+                          "DllGetVersion"));
 
         /* Because some DLLs might not implement this function, you
         must test for it explicitly. Depending on the particular 
         DLL, the lack of a DllGetVersion function can be a useful
         indicator of the version. */
 
-        if(pDllGetVersion)
+        if(pDllGetVersion != nullptr)
         {
             DLLVERSIONINFO dvi;
             HRESULT hr;
@@ -1646,12 +1661,12 @@ DWORD ShowError()
         FORMAT_MESSAGE_ALLOCATE_BUFFER | 
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
+        nullptr,
         dw,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
-        0, NULL );
-	MessageBox(NULL, (LPCTSTR)lpMsgBuf, 0, MB_OK | MB_ICONINFORMATION); 
+        reinterpret_cast<LPTSTR>(&lpMsgBuf),
+        0, nullptr );
+	MessageBox(nullptr, static_cast<LPCTSTR>(lpMsgBuf), nullptr, MB_OK | MB_ICONINFORMATION); 
 
     LocalFree(lpMsgBuf);
 	return dw;
@@ -1659,26 +1674,25 @@ DWORD ShowError()
 
 int ProcessLoading(HWND hWnd, HWND hCombo, int reload)
 {
-	int index, data,b;
 	EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
-	index = SendMessage((HWND)hCombo, CB_GETCURSEL, 0, 0);
-	data = SendMessage((HWND) hCombo, CB_GETITEMDATA, index, 0);
+	int index = SendMessage(hCombo, CB_GETCURSEL, 0, 0);
+	int data = SendMessage(hCombo, CB_GETITEMDATA, index, 0);
 	
 	if (data>0 && data<32)
 	{
-		b = SendDlgItemMessage(hWnd, IDC_LOADALWAYS, BM_GETCHECK, 0, 0);
+		int b = SendDlgItemMessage(hWnd, IDC_LOADALWAYS, BM_GETCHECK, 0, 0);
 		
-		if (disks[data]==NULL)
+		if (disks[data]==nullptr)
 		{
 			disks[data] = OpenDisk(0x41 + data);
-			if (disks[data] !=NULL)
+			if (disks[data] !=nullptr)
 			{
 				//LoadMFT(disks[data], FALSE);
 				StartLoading(disks[data], hWnd);
 			}
 			else
 			{
-				MessageBox(hWnd, szDiskError/*TEXT("The disk couldn't be opened.\nYOU HAVE TO BE ADMINISTRATOR TO USE THIS TOOL.")*/, 0, MB_ICONINFORMATION);
+				MessageBox(hWnd, szDiskError/*TEXT("The disk couldn't be opened.\nYOU HAVE TO BE ADMINISTRATOR TO USE THIS TOOL.")*/, nullptr, MB_ICONINFORMATION);
 				// set different icon
 			}
 		}
@@ -1695,7 +1709,7 @@ int ProcessLoading(HWND hWnd, HWND hCombo, int reload)
 
 		for (int i = 0; i<32; i++)
 		{
-			if ((drives >> (i)) & 0x1)
+			if (((drives >> (i)) & 0x1) != 0u)
 			{
 				TCHAR str[5];
 				UINT type;
@@ -1704,10 +1718,10 @@ int ProcessLoading(HWND hWnd, HWND hCombo, int reload)
 				type = GetDriveType(str);
 				if (type == DRIVE_FIXED)
 				{
-					if (disks[i]==NULL)
+					if (disks[i]==nullptr)
 					{
 						disks[i] = OpenDisk(0x41 + i);
-						if (disks[i] !=NULL)
+						if (disks[i] !=nullptr)
 						{
 							StartLoading(disks[i], hWnd);
 						}
@@ -1726,11 +1740,11 @@ int ProcessLoading(HWND hWnd, HWND hCombo, int reload)
 	}
 	else if (reload>0)
 	{
-		for (int i = 0;i<32;i++)
+		for (auto & disk : disks)
 		{
-			if (disks[i]!=NULL)
+			if (disk!=nullptr)
 			{
-				StartLoading(disks[i], hWnd);
+				StartLoading(disk, hWnd);
 			}
 		}
 	}

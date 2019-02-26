@@ -3,8 +3,8 @@
 #include "stdafx.h"
 #include "FixList.h"
 
-LINKITEM *fixlist=NULL;
-LINKITEM *curfix=NULL;
+LINKITEM *fixlist=nullptr;
+LINKITEM *curfix=nullptr;
 
 
 void AddToFixList(int entry, int data)
@@ -13,23 +13,22 @@ void AddToFixList(int entry, int data)
 	curfix->data = data;
 	curfix->next = new LINKITEM;
 	curfix = curfix->next;
-	curfix->next = NULL;
+	curfix->next = nullptr;
 }
 
 void CreateFixList()
 {
 	fixlist = new LINKITEM;
-	fixlist->next = NULL;
+	fixlist->next = nullptr;
 	curfix = fixlist;
 }
 
 void ProcessFixList(PDISKHANDLE disk)
 {
-	SEARCHFILEINFO *info, *src;
-	while (fixlist->next!=NULL)
+	while (fixlist->next!=nullptr)
 	{
-		info = &disk->fFiles[fixlist->entry];
-		src = &disk->fFiles[fixlist->data];
+		auto info = &disk->fFiles[fixlist->entry];
+		auto src = &disk->fFiles[fixlist->data];
 		info->FileName = src->FileName;
 		info->FileNameLength = src->FileNameLength;
 		
@@ -41,7 +40,7 @@ void ProcessFixList(PDISKHANDLE disk)
 		fixlist = fixlist->next;
 		delete item;
 	}
-	fixlist = NULL;
-	curfix = NULL;
+	fixlist = nullptr;
+	curfix = nullptr;
 }
 

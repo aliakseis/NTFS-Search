@@ -18,7 +18,7 @@ BOOL FreeHeap(PHEAPBLOCK block);
 
 PUCHAR AllocData(PHEAPBLOCK block, DWORD size);
 LPTSTR AllocString(PHEAPBLOCK block, DWORD size);
-LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPTSTR HEAP, DWORD size);
+LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPTSTR string, DWORD size);
 
 BOOL FreeAllBlocks(PHEAPBLOCK block);
 

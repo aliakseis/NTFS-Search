@@ -38,7 +38,7 @@ SEARCHP* StartSearch(wchar_t* string, int len)
 		if (ptr->mode==0)
 		{
 			res = wcschr(string, L'*');
-			if (res!=NULL)
+			if (res!=nullptr)
 			{
 				ptr->mode = 42;
 				*res = L'\0';
@@ -50,36 +50,43 @@ SEARCHP* StartSearch(wchar_t* string, int len)
 		}
 		return ptr;	
 	}
-	return NULL;
+	return nullptr;
 }
 
 // does the actual search
 int SearchStr(SEARCHP* pattern, wchar_t* string, int len)
 {
-	if (pattern->totallen>len)
+	if (pattern->totallen>len) {
 		return FALSE;
+}
 	switch(pattern->mode)
 	{
 		case 0:
-			if (wcscmp(string, pattern->string)==0)
+			if (wcscmp(string, pattern->string)==0) {
 				return TRUE;
+}
 			break;
 		case 1:
-			if (wcsnrcmp(string+len, pattern->string+pattern->len,pattern->len+1)==0)
+			if (wcsnrcmp(string+len, pattern->string+pattern->len,pattern->len+1)==0) {
 				return TRUE;
+}
 			break;
 		case 2:
-			if (wcsncmp(string, pattern->string,pattern->len)==0)
+			if (wcsncmp(string, pattern->string,pattern->len)==0) {
 				return TRUE;
+}
 			break;
 		case 3:
-			if (wcsstr(string,pattern->string)!=NULL)
+			if (wcsstr(string,pattern->string)!=nullptr) {
 				return TRUE;
+}
 			break;
 		case 42:
-			if (wcsnrcmp(string+len, pattern->extra+pattern->extralen,pattern->extralen+1)==0)
-				if (wcsncmp(string, pattern->string,pattern->len)==0)
+			if (wcsnrcmp(string+len, pattern->extra+pattern->extralen,pattern->extralen+1)==0) {
+				if (wcsncmp(string, pattern->string,pattern->len)==0) {
 				return TRUE;
+}
+}
 			break;
 	}
 	return FALSE;
@@ -97,14 +104,15 @@ int __cdecl wcsnrcmp (
         size_t count
         )
 {
-        if (!count)
+        if (count == 0u) {
                 return(0);
+}
 
-		while(--count && *first==*last)
+		while((--count != 0u) && *first==*last)
 		{
 			first--;
 			last--;
 		}
 
-		return ((int)(*first-*last));
+		return ((*first-*last));
 }
