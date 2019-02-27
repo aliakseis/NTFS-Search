@@ -23,7 +23,9 @@
 #include "SimplePattern.h"
 #include "process.h"
 
-#define MAX_LOADSTRING 100
+#include <algorithm>
+
+enum { MAX_LOADSTRING = 100 };
 
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
@@ -39,6 +41,10 @@ typedef struct SearchResult
     LPTSTR extra;
     LPTSTR filename;
     LPTSTR path;
+
+    ULONGLONG dataSize;
+    ULONGLONG allocatedSize;
+
 }*PSearchResult;
 
 SearchResult results[0xffff];
@@ -503,6 +509,21 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 
         ListView_InsertColumn(hListView, 1, &col);
 
+        // TODO strings in resources
+
+        col.pszText = _T("Size");
+        col.cx = 60;
+        col.iSubItem = 3;
+
+        ListView_InsertColumn(hListView, 3, &col);
+
+        col.pszText = _T("Allocated Size");
+        col.cx = 60;
+        col.iSubItem = 4;
+
+        ListView_InsertColumn(hListView, 4, &col);
+
+
         //ComboBox_SetMinVisible(hCombo, 5);
         ListView_SetImageList(hListView, list2, LVSIL_SMALL);
 
@@ -652,14 +673,13 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
 
                     if ((info->item.mask & LVIF_TEXT) != 0u)
                     {
-                        if (info->item.iSubItem == 0) {
-                            info->item.pszText = res->filename;
-                        }
-                        else if (info->item.iSubItem == 1) {
-                            info->item.pszText = res->extra;
-                        }
-                        else {
-                            info->item.pszText = res->path;
+                        switch (info->item.iSubItem)
+                        {
+                        case 0: _tcscpy_s(info->item.pszText, info->item.cchTextMax, res->filename); break;
+                        case 1: _tcscpy_s(info->item.pszText, info->item.cchTextMax, res->extra); break;
+                        case 2: _tcscpy_s(info->item.pszText, info->item.cchTextMax, res->path); break;
+                        case 3: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->dataSize); break;
+                        case 4: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->allocatedSize); break;
                         }
                     }
 
@@ -677,17 +697,17 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 break;
             case LVN_COLUMNCLICK:
                 listitem = (LPNMLISTVIEW)lParam;
-                if (listitem->iSubItem == 0)
+                switch (listitem->iSubItem)
                 {
-                    qsort((void*)&results[0], results_cnt, sizeof(SearchResult), filecompare);
-                }
-                else if (listitem->iSubItem == 1)
-                {
-                    qsort((void*)&results[0], results_cnt, sizeof(SearchResult), extcompare);
-                }
-                else if (listitem->iSubItem == 2)
-                {
-                    qsort((void*)&results[0], results_cnt, sizeof(SearchResult), pathcompare);
+                case 0: qsort((void*)&results[0], results_cnt, sizeof(SearchResult), filecompare); break;
+                case 1: qsort((void*)&results[0], results_cnt, sizeof(SearchResult), extcompare); break;
+                case 2: qsort((void*)&results[0], results_cnt, sizeof(SearchResult), pathcompare); break;
+                case 3: std::sort(results, results + results_cnt,
+                        [](const SearchResult& left, const SearchResult& right) { return left.dataSize > right.dataSize; });
+                    break;
+                case 4: std::sort(results, results + results_cnt,
+                        [](const SearchResult& left, const SearchResult& right) { return left.allocatedSize > right.allocatedSize; });
+                    break;
                 }
                 InvalidateRect(listitem->hdr.hwndFrom, nullptr, TRUE);
                 break;
@@ -1130,6 +1150,10 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
                     res->filename = const_cast<LPTSTR>(info[i].FileName);
                     res->path = AllocAndCopyString(PathStrings, t, s);
                     res->icon = info[i].Flags;
+
+                    res->dataSize = info[i].DataSize;
+                    res->allocatedSize = info[i].AllocatedSize;
+
                     LPTSTR ret;
                     if ((info[i].Flags & 0x002) == 0)
                     {

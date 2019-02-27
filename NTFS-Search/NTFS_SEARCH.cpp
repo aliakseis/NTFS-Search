@@ -8,6 +8,18 @@ PHEAPBLOCK currentBlock = nullptr;
 
 enum { CLUSTERSPERREAD = 1024 };
 
+ULONGLONG AttributeLength(PATTRIBUTE attr) 
+{ 
+    return attr->Nonresident
+        ? PNONRESIDENT_ATTRIBUTE(attr)->DataSize
+        : PRESIDENT_ATTRIBUTE(attr)->ValueLength;
+}
+
+ULONGLONG AttributeLengthAllocated(PATTRIBUTE attr)
+{
+    return attr->Nonresident ? PNONRESIDENT_ATTRIBUTE(attr)->AllocatedSize : PRESIDENT_ATTRIBUTE(attr)->ValueLength;
+}
+
 PDISKHANDLE OpenDisk(WCHAR DosDevice)
 {
     WCHAR path[8];
@@ -380,7 +392,7 @@ DWORD inline ProcessBuffer(PDISKHANDLE disk, PUCHAR buffer, DWORD size, FETCHPRO
     {
         auto fh = PFILE_RECORD_HEADER(buffer);
         FixFileRecord(fh);
-        if (FetchSearchInfo(disk, fh, data) != 0) {
+        if (FetchSearchInfo(disk, fh, data)) {
             disk->realFiles++;
         }
         buffer += disk->NTFS.BytesPerFileRecord;
@@ -493,16 +505,13 @@ VOID inline CallMe(PSTATUSINFO info, DWORD value)
 
 BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO* data)
 {
-    //int i;
-
     PFILENAME_ATTRIBUTE fn;
-    //PLONGFILEINFO data = (PLONGFILEINFO) buf;
     auto attr = reinterpret_cast<PATTRIBUTE>(reinterpret_cast<PUCHAR>(file) + file->AttributesOffset);
-    //PATTRIBUTE attrlist = NULL;
     int stop = min(8, file->NextAttributeNumber);
 
-    BOOL fileNameFound = FALSE;
-    BOOL dataFound = FALSE;
+    bool fileNameFound = false;
+    bool fileSizeFound = false;
+    bool dataFound = false;
 
     if (file->Ntfs.Type == 'ELIF')
     {
@@ -525,25 +534,40 @@ BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFI
                     data->FileNameLength = min(fn->NameLength, wcslen(data->FileName));
                     data->ParentId.QuadPart = fn->DirectoryFileReferenceNumber;
                     data->ParentId.HighPart &= 0x0000ffff;
+
+                    if (fn->DataSize || fn->AllocatedSize)
+                    {
+                        data->DataSize = fn->DataSize;
+                        data->AllocatedSize = fn->AllocatedSize;
+                    }
+
                     if (file->BaseFileRecord.LowPart != 0)// && file->BaseFileRecord.HighPart !=0x10000)
                     {
                         AddToFixList(file->BaseFileRecord.LowPart, disk->filesSize);
                     }
 
-                    if (dataFound != 0) {
+                    if (dataFound && fileSizeFound) {
                         return TRUE;
                     }
                 }
                 break;
             case Data:
             {
-                if (PRESIDENT_ATTRIBUTE(attr)->ValueLength > 0)
+                if (AttributeLength(attr) > 0 || AttributeLengthAllocated(attr) > 0)
+                {
+                    data->DataSize = AttributeLength(attr);
+                    data->AllocatedSize = AttributeLengthAllocated(attr);
+                    if (fileNameFound && dataFound) {
+                        return TRUE;
+                    }
+                }
+                if (!attr->Nonresident && PRESIDENT_ATTRIBUTE(attr)->ValueLength > 0)
                 {
                     memcpy(data->data,
                         PUCHAR(attr) + PRESIDENT_ATTRIBUTE(attr)->ValueOffset,
                         min(sizeof(data->data), PRESIDENT_ATTRIBUTE(attr)->ValueLength));
 
-                    if (fileNameFound != 0) {
+                    if (fileNameFound && fileSizeFound) {
                         return TRUE;
                     }
                 }

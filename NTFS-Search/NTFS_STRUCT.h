@@ -200,70 +200,15 @@ typedef struct {
 
 #define UNKNOWN 0xff99ff99
 
-/*
-typedef struct
-{
-	LPCWSTR FileName;
-	DWORD FileNameLength;
-	ULARGE_INTEGER ParentId;
-	//ULARGE_INTEGER mftnumber; //Inode
-	DWORD Inode;
-	WORD flags;
-	//HTREEITEM hItem;
-	FILETIME ctime;
-	FILETIME atime;
-	FILETIME mtime;
-	FILETIME rtime;
-
-	ULONGLONG filesize;
-	ULONGLONG allocfilesize;
-	DWORD attributes;
-	DWORD objAttrib;
-
-}FILEINFORMATION, *PFILEINFORMATION;
-
-typedef struct {
-	LPCWSTR FileName;
-	USHORT FileNameLength;
-	USHORT Flags;
-	ULARGE_INTEGER ParentId;
-}SEARCHFILEINFO, *PSEARCHFILEINFO;
-
-typedef struct {
-	LPCWSTR FileName;
-	USHORT FileNameLength;
-	USHORT Flags;
-	ULARGE_INTEGER ParentId;
-	ULARGE_INTEGER FileSize;
-	LPARAM UserData; 
-	PVOID ExtraData;
-}SHORTFILEINFO, *PSHORTFILEINFO;
-
-typedef struct 
-{
-	LPCWSTR FileName;
-	USHORT FileNameLength;
-	USHORT Flags;
-	ULARGE_INTEGER ParentId;
-	ULARGE_INTEGER FileSize;
-	LPARAM UserData; 
-	PVOID ExtraData;
-
-	FILETIME CreationTime;
-	FILETIME AccessTime;
-	FILETIME WriteTime;
-	FILETIME ChangeTime;
-	ULARGE_INTEGER AllocatedFileSize;
-	DWORD FileAttributes;
-	DWORD Attributes;
-}LONGFILEINFO, *PLONGFILEINFO;
-*/
 
 typedef struct {
     LPCWSTR FileName;
     USHORT FileNameLength;
     USHORT Flags;
     ULARGE_INTEGER ParentId;
+
+    ULONGLONG DataSize;
+    ULONGLONG AllocatedSize;
 
     char data[64];
 }SEARCHFILEINFO, *PSEARCHFILEINFO;
@@ -298,14 +243,6 @@ typedef struct {
 
 
         SEARCHFILEINFO *fFiles;
-        /*
-		union
-		{
-			LONGFILEINFO *lFiles;
-			SHORTFILEINFO *sFiles;
-			SEARCHFILEINFO *fFiles;
-		};
-        */
 	};
 }DISKHANDLE, *PDISKHANDLE;
 
