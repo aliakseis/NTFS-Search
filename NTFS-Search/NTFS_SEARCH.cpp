@@ -279,13 +279,13 @@ DWORD ReadMFTParse(PDISKHANDLE disk, PNONRESIDENT_ATTRIBUTE attr, ULONGLONG vcn,
     return ret;
 }
 
-ULONG RunLength(const const PUCHAR run)
+ULONG RunLength(const PUCHAR run)
 {
     // i guess it must be this way
     return (*run & 0xf) + ((*run >> 4) & 0xf) + 1;
 }
 
-LONGLONG RunLCN(const const PUCHAR run)
+LONGLONG RunLCN(const PUCHAR run)
 {
     UCHAR n1 = *run & 0xf;
     UCHAR n2 = (*run >> 4) & 0xf;
@@ -297,7 +297,7 @@ LONGLONG RunLCN(const const PUCHAR run)
     return lcn;
 }
 
-ULONGLONG RunCount(const const PUCHAR run)
+ULONGLONG RunCount(const PUCHAR run)
 {
     // count the runs we have to process
     UCHAR k = *run & 0xf;
