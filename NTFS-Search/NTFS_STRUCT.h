@@ -67,6 +67,7 @@ typedef struct{
 */
 
 typedef enum {
+	ZeroValue = 0,
 	StandardInformation = 0x10,
 	AttributeList = 0x20,
 	FileName = 0x30,

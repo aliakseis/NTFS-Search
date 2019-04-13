@@ -562,7 +562,7 @@ BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFI
                         return TRUE;
                     }
                 }
-            case 0: // falls through
+            case ZeroValue: // falls through
                 if (AttributeLength(attr) > 0 || AttributeLengthAllocated(attr) > 0)
                 {
                     data->DataSize = max(data->DataSize, AttributeLength(attr));

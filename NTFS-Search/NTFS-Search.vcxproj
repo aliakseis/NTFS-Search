@@ -134,10 +134,9 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>comctl32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)NTFS-Search.1.1.0.6.exe</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <ManifestFile>$(IntDir)NTFS-Search.1.1.0.6.intermediate.manifest</ManifestFile>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
       <AssemblyDebug>false</AssemblyDebug>
       <SubSystem>Windows</SubSystem>
       <HeapReserveSize>512000000</HeapReserveSize>
@@ -163,10 +162,9 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>comctl32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)NTFS-Search.1.1.0.6.exe</OutputFile>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <ManifestFile>$(IntDir)NTFS-Search.1.1.0.6.intermediate.manifest</ManifestFile>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
       <AssemblyDebug>false</AssemblyDebug>
       <SubSystem>Windows</SubSystem>
       <HeapReserveSize>512000000</HeapReserveSize>
