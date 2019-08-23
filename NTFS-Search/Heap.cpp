@@ -95,8 +95,12 @@ LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPTSTR string, DWORD size)
 copy:
     ret = &tmp->data[tmp->current];
     memcpy(ret, string, rsize);
+
+    ret[rsize - 2] = 0;
+    ret[rsize - 1] = 0;
     ret[rsize] = 0;
     ret[rsize + 1] = 0;
+
     tmp->current += asize;
     return reinterpret_cast<LPTSTR>(ret);
 

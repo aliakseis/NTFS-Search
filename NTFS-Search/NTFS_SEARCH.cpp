@@ -3,10 +3,16 @@
 #include "commctrl.h"
 #include "FixList.h"
 
+#include <winioctl.h>
+
 // HEAPHeap
 PHEAPBLOCK currentBlock = nullptr;
 
 enum { CLUSTERSPERREAD = 1024 };
+
+template <class T1, class T2> inline
+T1* Padd(T1* p, T2 n) { return (T1*)((char *)p + n); }
+
 
 ULONGLONG AttributeLength(PATTRIBUTE attr) 
 { 
@@ -19,6 +25,62 @@ ULONGLONG AttributeLengthAllocated(PATTRIBUTE attr)
 {
     return attr->Nonresident ? PNONRESIDENT_ATTRIBUTE(attr)->AllocatedSize : PRESIDENT_ATTRIBUTE(attr)->ValueLength;
 }
+
+VOID ReadSector(PDISKHANDLE disk, ULONGLONG sector, ULONG count, PVOID buffer)
+{
+    ULARGE_INTEGER offset;
+    OVERLAPPED overlap = { 0 };
+    ULONG n;
+
+    offset.QuadPart = sector * disk->NTFS.bootSector.BytesPerSector;
+    overlap.Offset = offset.LowPart; 
+    overlap.OffsetHigh = offset.HighPart;
+
+    ReadFile(disk->fileHandle, buffer, count * disk->NTFS.bootSector.BytesPerSector, &n, &overlap);
+}
+
+VOID ReadLCN(PDISKHANDLE disk, ULONGLONG lcn, ULONG count, PVOID buffer)
+{
+    ReadSector(disk, lcn * disk->NTFS.bootSector.SectorsPerCluster,
+        count * disk->NTFS.bootSector.SectorsPerCluster, buffer);
+}
+
+VOID ReadExternalAttribute(PDISKHANDLE disk, PNONRESIDENT_ATTRIBUTE attr,
+    ULONGLONG vcn, ULONG count, PVOID buffer)
+{
+    ULONGLONG lcn, runcount;
+    ULONG readcount, left;
+    PUCHAR bytes = PUCHAR(buffer);
+
+    for (left = count; left > 0; left -= readcount) {
+        FindRun(attr, vcn, &lcn, &runcount);
+
+        readcount = ULONG(min(runcount, left));
+
+        ULONG n = readcount * disk->NTFS.BytesPerCluster;
+
+        if (lcn == 0)
+            memset(bytes, 0, n);
+        else
+            ReadLCN(disk, lcn, readcount, bytes);
+
+        vcn += readcount;
+        bytes += n;
+    }
+}
+
+void ReadAttribute(PDISKHANDLE disk, PATTRIBUTE attr, PVOID buffer)
+{
+    if (attr->Nonresident == FALSE) {
+        PRESIDENT_ATTRIBUTE rattr = PRESIDENT_ATTRIBUTE(attr);
+        memcpy(buffer, Padd(rattr, rattr->ValueOffset), rattr->ValueLength);
+    }
+    else {
+        PNONRESIDENT_ATTRIBUTE nattr = PNONRESIDENT_ATTRIBUTE(attr);
+        ReadExternalAttribute(disk, nattr, 0, ULONG(nattr->HighVcn) + 1, buffer);
+    }
+}
+
 
 PDISKHANDLE OpenDisk(WCHAR DosDevice)
 {
@@ -359,23 +421,32 @@ DWORD ReadMFTLCN(PDISKHANDLE disk, ULONGLONG lcn, ULONG count, PVOID buffer, FET
     DWORD cnt = 0, c = 0, pos = 0;
 
     offset.QuadPart = lcn*disk->NTFS.BytesPerCluster;
-    SetFilePointer(disk->fileHandle, offset.LowPart, &offset.HighPart, FILE_BEGIN);
+    //SetFilePointer(disk->fileHandle, offset.LowPart, &offset.HighPart, FILE_BEGIN);
+
+    OVERLAPPED overlap = { 0 };
+    overlap.Offset = offset.LowPart;
+    overlap.OffsetHigh = offset.HighPart;
+
 
     cnt = count / CLUSTERSPERREAD;
 
     for (int i = 1; i <= cnt; i++)
     {
 
-        ReadFile(disk->fileHandle, buffer, CLUSTERSPERREAD*disk->NTFS.BytesPerCluster, &read, nullptr);
+        ReadFile(disk->fileHandle, buffer, CLUSTERSPERREAD*disk->NTFS.BytesPerCluster, &read, &overlap);
         c += CLUSTERSPERREAD;
         pos += read;
+
+        offset.QuadPart += read;
+        overlap.Offset = offset.LowPart;
+        overlap.OffsetHigh = offset.HighPart;
 
         ProcessBuffer(disk, static_cast<PUCHAR>(buffer), read, fetch);
         CallMe(info, disk->filesSize);
 
     }
 
-    ReadFile(disk->fileHandle, buffer, (count - c)*disk->NTFS.BytesPerCluster, &read, nullptr);
+    ReadFile(disk->fileHandle, buffer, (count - c)*disk->NTFS.BytesPerCluster, &read, &overlap);
     ProcessBuffer(disk, static_cast<PUCHAR>(buffer), read, fetch);
     CallMe(info, disk->filesSize);
 
@@ -527,27 +598,99 @@ BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFI
             {
             case FileName:
                 fn = PFILENAME_ATTRIBUTE(PUCHAR(attr) + PRESIDENT_ATTRIBUTE(attr)->ValueOffset);
+                if (fn->DataSize || fn->AllocatedSize)
+                {
+                    data->DataSize = fn->DataSize;
+                    data->AllocatedSize = fn->AllocatedSize;
+                }
                 if (((fn->NameType & WIN32_NAME) != 0) || fn->NameType == 0)
                 {
-                    fn->Name[fn->NameLength] = L'\0';
+                    if (!memcmp(fn->Name, L"InstallationLog.txt", 38))
+                    {
+                        DebugBreak();
+                    }
+                    //fn->Name[fn->NameLength] = L'\0';
                     data->FileName = AllocAndCopyString(disk->heapBlock, fn->Name, fn->NameLength);
                     data->FileNameLength = min(fn->NameLength, wcslen(data->FileName));
                     data->ParentId.QuadPart = fn->DirectoryFileReferenceNumber;
                     data->ParentId.HighPart &= 0x0000ffff;
-
-                    if (fn->DataSize || fn->AllocatedSize)
-                    {
-                        data->DataSize = fn->DataSize;
-                        data->AllocatedSize = fn->AllocatedSize;
-                    }
 
                     if (file->BaseFileRecord.LowPart != 0)// && file->BaseFileRecord.HighPart !=0x10000)
                     {
                         AddToFixList(file->BaseFileRecord.LowPart, disk->filesSize);
                     }
 
+                    fileNameFound = true;
+
                     if (dataFound && fileSizeFound) {
                         return TRUE;
+                    }
+                }
+                break;
+            case AttributeList:
+                {
+                    //break;
+
+                    UCHAR attrbuf[64 * 1024];//4096];
+                    ReadAttribute(disk, attr, &attrbuf[0]);
+
+
+                    PATTRIBUTE_LIST attrlist = (PATTRIBUTE_LIST)&attrbuf[0];
+                    while (attrlist->Attribute != -1)
+                    {
+                        //if (attrlist->Attribute == FileName)
+                        //    return (DWORD)attrlist->FileReferenceNumber;
+                        //else if (attrlist->Attribute == AttributeList)
+                        //{
+                        //    UCHAR buf[4096];
+
+                        //}
+                        if (attrlist->Attribute == Data)
+                        {
+                            //DebugBreak();
+
+                            //*
+
+                            NTFS_FILE_RECORD_INPUT_BUFFER mftRecordInput{};
+                            mftRecordInput.FileReferenceNumber.QuadPart = 0xffffffffffff & attrlist->FileReferenceNumber;
+                            DWORD dwRet = 0;
+                            enum { dwFileRecSize = 64 * 1024 };
+                            char buf[dwFileRecSize];
+                            PNTFS_FILE_RECORD_OUTPUT_BUFFER pMftRecord = (PNTFS_FILE_RECORD_OUTPUT_BUFFER)buf;
+                            PFILE_RECORD_HEADER pfileRecordheader = (PFILE_RECORD_HEADER)pMftRecord->FileRecordBuffer;
+                            //NTFS_FILE_RECORD_OUTPUT_BUFFER
+                            if (DeviceIoControl(disk->fileHandle, FSCTL_GET_NTFS_FILE_RECORD
+                                , &mftRecordInput, sizeof(mftRecordInput)
+                                , pMftRecord, dwFileRecSize, &dwRet, NULL))
+                            {
+                                volatile auto pAttribute = (PATTRIBUTE)((PBYTE)pfileRecordheader + pfileRecordheader->AttributesOffset);
+                                while (pAttribute->AttributeType != -1)
+                                {
+                                    if (pAttribute->AttributeType == Data && pAttribute->Nonresident)
+                                    {
+                                        //data->DataSize = max(data->DataSize, AttributeLength(pAttribute));
+                                        //data->AllocatedSize = max(data->AllocatedSize, AttributeLengthAllocated(pAttribute));
+                                        data->DataSize += AttributeLength(pAttribute);
+                                        data->AllocatedSize += AttributeLengthAllocated(pAttribute);
+                                        //break;
+                                    }
+                                    //if (pAttribute->Nonresident) {
+                                    //    *pOutSize = PNONRESIDENT_ATTRIBUTE(pAttribute)->DataSize;
+                                    //}
+                                    //else {
+                                    //    *pOutSize = PRESIDENT_ATTRIBUTE(pAttribute)->ValueLength;
+                                    //}
+                                    if (!pAttribute->Length)
+                                        break;
+                                    pAttribute = (PATTRIBUTE)(PUCHAR(pAttribute) + pAttribute->Length);
+                                }
+                            }
+
+                            //*/
+                        }
+                        if (!attrlist->Length)
+                            break;
+                        attrlist = (PATTRIBUTE_LIST)(PUCHAR(attrlist) + attrlist->Length);
                     }
                 }
                 break;
