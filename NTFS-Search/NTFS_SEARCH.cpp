@@ -549,6 +549,7 @@ BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFI
                     if (dataFound && fileSizeFound) {
                         return TRUE;
                     }
+                    fileNameFound = true;
                 }
                 break;
             case Data:
@@ -561,6 +562,7 @@ BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFI
                     if (fileNameFound && fileSizeFound) {
                         return TRUE;
                     }
+                    dataFound = true;
                 }
             case ZeroValue: // falls through
                 if (AttributeLength(attr) > 0 || AttributeLengthAllocated(attr) > 0)
@@ -570,6 +572,7 @@ BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFI
                     if (fileNameFound && dataFound) {
                         return TRUE;
                     }
+                    fileSizeFound = true;
                 }
             break;
             default:
