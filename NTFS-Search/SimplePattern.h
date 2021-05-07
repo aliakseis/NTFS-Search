@@ -11,5 +11,5 @@ struct SEARCHP
 };
 
 SEARCHP* StartSearch(wchar_t* string, int len);
-int SearchStr(SEARCHP* pattern, wchar_t* string, int len);
+bool SearchStr(SEARCHP* pattern, wchar_t* string, int len);
 int EndSearch(SEARCHP* pattern);

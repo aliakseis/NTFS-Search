@@ -54,42 +54,42 @@ SEARCHP* StartSearch(wchar_t* string, int len)
 }
 
 // does the actual search
-int SearchStr(SEARCHP* pattern, wchar_t* string, int len)
+bool SearchStr(SEARCHP* pattern, wchar_t* string, int len)
 {
     if (pattern->totallen > len) {
-        return FALSE;
+        return false;
     }
     switch (pattern->mode)
     {
     case 0:
         if (wcscmp(string, pattern->string) == 0) {
-            return TRUE;
+            return true;
         }
         break;
     case 1:
         if (wcsnrcmp(string + len, pattern->string + pattern->len, pattern->len + 1) == 0) {
-            return TRUE;
+            return true;
         }
         break;
     case 2:
         if (wcsncmp(string, pattern->string, pattern->len) == 0) {
-            return TRUE;
+            return true;
         }
         break;
     case 3:
         if (wcsstr(string, pattern->string) != nullptr) {
-            return TRUE;
+            return true;
         }
         break;
     case 42:
         if (wcsnrcmp(string + len, pattern->extra + pattern->extralen, pattern->extralen + 1) == 0) {
             if (wcsncmp(string, pattern->string, pattern->len) == 0) {
-                return TRUE;
+                return true;
             }
         }
         break;
     }
-    return FALSE;
+    return false;
 }
 // just the simple cleanup, because no copies were made
 int EndSearch(SEARCHP* pattern)

@@ -665,19 +665,18 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
             case LVN_GETDISPINFO:
                 NMLVDISPINFO* info;
                 info = (NMLVDISPINFO*)lParam;
-                SearchResult* res;
 
                 if (info->item.iItem > -1 && info->item.iItem < results_cnt)
                 {
-                    res = &results[info->item.iItem];//(SearchResult*) &SearchResults->data[info->item.iItem*sizeof(SearchResult)];
+                    auto res = &results[info->item.iItem];
 
                     if ((info->item.mask & LVIF_TEXT) != 0u)
                     {
                         switch (info->item.iSubItem)
                         {
-                        case 0: _tcscpy_s(info->item.pszText, info->item.cchTextMax, res->filename); break;
-                        case 1: _tcscpy_s(info->item.pszText, info->item.cchTextMax, res->extra); break;
-                        case 2: _tcscpy_s(info->item.pszText, info->item.cchTextMax, res->path); break;
+                        case 0: info->item.pszText = res->filename; break;
+                        case 1: info->item.pszText = res->extra; break;
+                        case 2: info->item.pszText = res->path; break;
                         case 3: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->dataSize); break;
                         case 4: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->allocatedSize); break;
                         }
@@ -1107,7 +1106,6 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
     WCHAR tmp[0xffff];
     SEARCHFILEINFO *info;
     int len = 0;
-    int res = 0;
     if (glSensitive == 0)
     {
         _wcslwr(filename);
@@ -1124,6 +1122,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
         {
             if (info[i].FileName != nullptr)
             {
+                bool res;
                 if (glSensitive == 0)
                 {
                     //MessageBox(0,PSEARCHFILEINFO(data)->FileName,0,0);
@@ -1136,20 +1135,45 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
                 {
                     res = SearchStr(pat, const_cast<wchar_t*>(info[i].FileName), info[i].FileNameLength);
                 }
-                if (res == TRUE)
+                if (res)
                     //if (wcsstr(tmp, filename)!=NULL)
                     //if (SearchString(tmp, PSEARCHFILEINFO(data)->FileNameLength, filename, len)==TRUE)
                     //if (StringRegCompare(tmp, PSEARCHFILEINFO(data)->FileNameLength, filename, len)==TRUE)
                 {
-                    SearchResult* res;
-                    res = &results[results_cnt++];//(SearchResult*) AllocData(SearchResults, sizeof(SearchResult));
-                    LPTSTR t;
-                    int s;
-                    t = GetPath(disk, i);
-                    s = wcslen(t);
+                    SearchResult* res = &results[results_cnt++];
+                    auto t = GetPath(disk, i);
+                    auto s = wcslen(t);
                     res->filename = const_cast<LPTSTR>(info[i].FileName);
                     res->path = AllocAndCopyString(PathStrings, t, s);
                     res->icon = info[i].Flags;
+
+                    if (info[i].DataSize == 0 && info[i].AllocatedSize == 0)
+                    {
+                        WCHAR filePath[0x10000];
+                        PathCombineW(filePath, res->path, res->filename);
+                        HANDLE hFile = CreateFile(filePath,
+                            GENERIC_READ,
+                            FILE_SHARE_READ,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+                        if (hFile != INVALID_HANDLE_VALUE)
+                        {
+                            FILE_STANDARD_INFO fileInfo {};
+                            if (GetFileInformationByHandleEx(
+                                hFile,
+                                FileStandardInfo,
+                                &fileInfo,
+                                sizeof(fileInfo)))
+                            {
+                                info[i].DataSize = fileInfo.EndOfFile.QuadPart;
+                                info[i].AllocatedSize = fileInfo.AllocationSize.QuadPart;
+                            }
+
+                            CloseHandle(hFile);
+                        }
+                    }
 
                     res->dataSize = info[i].DataSize;
                     res->allocatedSize = info[i].AllocatedSize;
