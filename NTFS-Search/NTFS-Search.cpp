@@ -24,6 +24,7 @@
 #include "process.h"
 
 #include <algorithm>
+#include <memory>
 
 enum { MAX_LOADSTRING = 100 };
 
@@ -1105,12 +1106,10 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
     //PUCHAR data;
     WCHAR tmp[0xffff];
     SEARCHFILEINFO *info;
-    int len = 0;
     if (glSensitive == 0)
     {
         _wcslwr(filename);
     }
-    len = wcslen(filename);
     info = disk->fFiles;
 
     memset(&item, 0, sizeof(item));
@@ -1481,18 +1480,15 @@ void PrepareCopy(HWND hWnd, UINT flags)
     DWORD datasize = 0;
     //STGMEDIUM stg;
     DROPFILES files;
-    int newline;
     int structsize;
 
     switch (flags)
     {
     case FILES:
-        newline = 0;
         structsize = sizeof(files);
         break;
     case FILENAMES:
     default:
-        newline = L'\n';
         structsize = 0;
         break;
     }
@@ -1507,17 +1503,14 @@ void PrepareCopy(HWND hWnd, UINT flags)
     files.pFiles = sizeof(files);
     files.fWide = TRUE;
 
-    TCHAR *buff;
-
-    buff = static_cast<TCHAR*>(malloc(0x100000));
-    int len;
+    auto buff = std::make_unique<TCHAR[]>(0x80000);
     for (int i = 0; i < results_cnt; i++)
     {
         UINT mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
         if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
         {
             wcscpy(&buff[datasize], results[i].path);
-            len = wcslen(&buff[datasize]);
+            int len = wcslen(&buff[datasize]);
             wcscpy(&buff[datasize + len], results[i].filename);
             len += wcslen(&buff[datasize + len]);
 
@@ -1542,7 +1535,6 @@ void PrepareCopy(HWND hWnd, UINT flags)
     //stg.hGlobal = GlobalAlloc(0, sizeof(files) + datasize*sizeof(TCHAR));
 
 
-    PVOID ptr;
     HANDLE hdrop = GlobalAlloc(0, /*sizeof(stg) + */structsize + datasize * sizeof(TCHAR));
 
 
@@ -1550,9 +1542,9 @@ void PrepareCopy(HWND hWnd, UINT flags)
     //CopyMemory(ptr, &stg, sizeof(STGMEDIUM));
     //GlobalUnlock(hdrop);
 
-    ptr = GlobalLock(hdrop);
+    auto ptr = GlobalLock(hdrop);
     CopyMemory(ptr, &files, structsize);
-    CopyMemory(PUCHAR(ptr) + structsize, buff, datasize * sizeof(TCHAR));
+    CopyMemory(PUCHAR(ptr) + structsize, buff.get(), datasize * sizeof(TCHAR));
     GlobalUnlock(hdrop);
 
     if (OpenClipboard(hWnd) != 0)
@@ -1588,10 +1580,6 @@ void PrepareCopy(HWND hWnd, UINT flags)
         //GlobalFree(stg.hGlobal);
         GlobalFree(hdrop);
     }
-
-    //DragQueryFile((HDROP)hdrop, 0, buff, 260);
-
-    free(&buff[0]);
 }
 
 void DeleteFiles(HWND hWnd, UINT flags)
