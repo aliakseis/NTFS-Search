@@ -457,7 +457,6 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
     int id, msg;
     int index;
     TCHAR data;
-    int b;
     DWORD loaded;
 
     static TCHAR tmp[MAX_PATH];
@@ -866,18 +865,8 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 data = SendMessage(hCombo, CB_GETITEMDATA, index, 0);
                 GetDlgItemText(hWnd, IDC_EDIT, tmp, MAX_PATH);
 
-
-
-                DWORD res;
-
-
-                b = SendDlgItemMessage(hWnd, IDC_DELETED, BM_GETCHECK, 0, 0);
-                if (b == BST_CHECKED) {
-                    res = Search(hWnd, data, tmp, FALSE);
-                }
-                else {
-                    res = Search(hWnd, data, tmp, TRUE);
-                }
+                int b = SendDlgItemMessage(hWnd, IDC_DELETED, BM_GETCHECK, 0, 0);
+                DWORD res = Search(hWnd, data, tmp, b == BST_CHECKED);
 
                 wsprintf(tmp, &szFound[0]/* TEXT("%d files found.")*/, res);
                 SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)tmp);
@@ -921,20 +910,14 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
         }
         else if (id == IDC_CASE)
         {
-            b = SendDlgItemMessage(hWnd, IDC_CASE, BM_GETCHECK, 0, 0);
-            if (b == BST_CHECKED)
-            {
-                glSensitive = TRUE;
-            }
-            else {
-                glSensitive = FALSE;
-            }
+            int b = SendDlgItemMessage(hWnd, IDC_CASE, BM_GETCHECK, 0, 0);
+            glSensitive = (b == BST_CHECKED);
         }
         else if (msg == EN_CHANGE)
         {
             int len;
             len = SendDlgItemMessage(hWnd, id, WM_GETTEXTLENGTH, 0, 0);
-            b = SendDlgItemMessage(hWnd, IDC_LIVE, BM_GETCHECK, 0, 0);
+            int b = SendDlgItemMessage(hWnd, IDC_LIVE, BM_GETCHECK, 0, 0);
             EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
 
             if (len > 2 && b == BST_CHECKED)
