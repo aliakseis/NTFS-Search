@@ -54,7 +54,7 @@ typedef struct SearchResult
 
 std::vector<SearchResult> results;
 
-const auto MAX_RESULTS_NUMBER = 1000000;
+const auto MAX_RESULTS_NUMBER = 2000000;
 
 int glSensitive = FALSE;
 BOOL glHelp = FALSE;
@@ -1136,8 +1136,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEAR
                     const auto path = AllocAndCopyString(PathStrings, t, s);
                     const auto icon = info[i].Flags;
 
-                    if (info[i].DataSize == 0 && info[i].AllocatedSize == 0 
-                        && info[i].Flags != 0x002) // not directory
+                    if (info[i].DataSize == 0 && info[i].Flags != 0x002) // not directory
                     {
                         WCHAR filePath[0x10000];
                         PathCombineW(filePath, path, filename);
