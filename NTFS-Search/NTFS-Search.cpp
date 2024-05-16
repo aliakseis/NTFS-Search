@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 enum { MAX_LOADSTRING = 100 };
 
@@ -48,8 +49,13 @@ typedef struct SearchResult
 
 }*PSearchResult;
 
-SearchResult results[0xffff];
-int results_cnt = 0;
+//SearchResult results[0xffff];
+//int results_cnt = 0;
+
+std::vector<SearchResult> results;
+
+const auto MAX_RESULTS_NUMBER = 1000000;
+
 int glSensitive = FALSE;
 BOOL glHelp = FALSE;
 
@@ -642,10 +648,10 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                     int j = 0;
                     for (int i = finditem->iStart; i != finditem->iStart - 1; i++)
                     {
-                        if (j >= results_cnt) {
+                        if (j >= results.size()) {
                             break;
                         }
-                        if (i >= results_cnt) {
+                        if (i >= results.size()) {
                             i = 0;
                         }
                         stmp2[0] = results[i].filename[0];
@@ -667,7 +673,7 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 NMLVDISPINFO* info;
                 info = (NMLVDISPINFO*)lParam;
 
-                if (info->item.iItem > -1 && info->item.iItem < results_cnt)
+                if (info->item.iItem > -1 && info->item.iItem < results.size())
                 {
                     auto res = &results[info->item.iItem];
 
@@ -699,13 +705,13 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 listitem = (LPNMLISTVIEW)lParam;
                 switch (listitem->iSubItem)
                 {
-                case 0: qsort((void*)&results[0], results_cnt, sizeof(SearchResult), filecompare); break;
-                case 1: qsort((void*)&results[0], results_cnt, sizeof(SearchResult), extcompare); break;
-                case 2: qsort((void*)&results[0], results_cnt, sizeof(SearchResult), pathcompare); break;
-                case 3: std::sort(results, results + results_cnt,
+                case 0: qsort((void*)&results[0], results.size(), sizeof(SearchResult), filecompare); break;
+                case 1: qsort((void*)&results[0], results.size(), sizeof(SearchResult), extcompare); break;
+                case 2: qsort((void*)&results[0], results.size(), sizeof(SearchResult), pathcompare); break;
+                case 3: std::sort(results.data(), results.data() + results.size(),
                         [](const SearchResult& left, const SearchResult& right) { return left.dataSize > right.dataSize; });
                     break;
-                case 4: std::sort(results, results + results_cnt,
+                case 4: std::sort(results.data(), results.data() + results.size(),
                         [](const SearchResult& left, const SearchResult& right) { return left.allocatedSize > right.allocatedSize; });
                     break;
                 }
@@ -817,7 +823,7 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
         else if (id == IDM_SAVE)
         {
             OPENFILENAME of;
-            wsprintf(tmp, &szResults[0]/*TEXT("results_%d.txt")*/, results_cnt);
+            wsprintf(tmp, &szResults[0]/*TEXT("results_%d.txt")*/, results.size());
             memset(&of, 0, sizeof(OPENFILENAME));
             of.lStructSize = sizeof(OPENFILENAME);
             of.lpstrFile = tmp;
@@ -1060,7 +1066,8 @@ int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted)
     ListView_DeleteAllItems(hListView);
     ReUseBlocks(PathStrings, FALSE);
     ReUseBlocks(FileStrings, FALSE);
-    results_cnt = 0;
+    //results_cnt = 0;
+    results.clear();
 
     SEARCHP* pat;
 
@@ -1082,17 +1089,17 @@ int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted)
     {
         for (auto & disk : disks)
         {
-            if (disk != nullptr && results_cnt < 0xfff0)
+            if (disk != nullptr && results.size() < MAX_RESULTS_NUMBER)
             {
                 ret += SearchFiles(hWnd, disk, filename, deleted, pat);
             }
         }
     }
-    if (ret != results_cnt) {
+    if (ret != results.size()) {
         DebugBreak();
     }
-    results_cnt = ret;
-    ListView_SetItemCountEx(hListView, results_cnt, 0);
+    //results_cnt = ret;
+    ListView_SetItemCountEx(hListView, results.size(), 0);
     SendMessage(hListView, WM_SETREDRAW, TRUE, 0);
     EndSearch(pat);
 
@@ -1121,35 +1128,35 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
         {
             if (info[i].FileName != nullptr)
             {
-                bool res;
+                bool ok;
                 if (glSensitive == 0)
                 {
                     //MessageBox(0,PSEARCHFILEINFO(data)->FileName,0,0);
                     //wcscpy_s(tmp,info->FileName, info->FileNameLength);
                     memcpy(tmp, info[i].FileName, info[i].FileNameLength * sizeof(TCHAR) + 2);
                     _wcslwr(tmp);
-                    res = SearchStr(pat, (wchar_t*)tmp, info[i].FileNameLength);
+                    ok = SearchStr(pat, (wchar_t*)tmp, info[i].FileNameLength);
                 }
                 else
                 {
-                    res = SearchStr(pat, const_cast<wchar_t*>(info[i].FileName), info[i].FileNameLength);
+                    ok = SearchStr(pat, const_cast<wchar_t*>(info[i].FileName), info[i].FileNameLength);
                 }
-                if (res)
+                if (ok)
                     //if (wcsstr(tmp, filename)!=NULL)
                     //if (SearchString(tmp, PSEARCHFILEINFO(data)->FileNameLength, filename, len)==TRUE)
                     //if (StringRegCompare(tmp, PSEARCHFILEINFO(data)->FileNameLength, filename, len)==TRUE)
                 {
-                    SearchResult* res = &results[results_cnt++];
-                    auto t = GetPath(disk, i);
-                    auto s = wcslen(t);
-                    res->filename = const_cast<LPTSTR>(info[i].FileName);
-                    res->path = AllocAndCopyString(PathStrings, t, s);
-                    res->icon = info[i].Flags;
+                    //SearchResult* res = &results[results_cnt++];
+                    const auto t = GetPath(disk, i);
+                    const auto s = wcslen(t);
+                    const auto filename = const_cast<LPTSTR>(info[i].FileName);
+                    const auto path = AllocAndCopyString(PathStrings, t, s);
+                    const auto icon = info[i].Flags;
 
                     if (info[i].DataSize == 0 && info[i].AllocatedSize == 0)
                     {
                         WCHAR filePath[0x10000];
-                        PathCombineW(filePath, res->path, res->filename);
+                        PathCombineW(filePath, path, filename);
                         HANDLE hFile = CreateFile(filePath,
                             GENERIC_READ,
                             FILE_SHARE_READ,
@@ -1174,24 +1181,28 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
                         }
                     }
 
-                    res->dataSize = info[i].DataSize;
-                    res->allocatedSize = info[i].AllocatedSize;
+                    const auto dataSize = info[i].DataSize;
+                    const auto allocatedSize = info[i].AllocatedSize;
 
-                    LPTSTR ret;
+                    //LPTSTR ret;
+                    LPTSTR extra;
                     if ((info[i].Flags & 0x002) == 0)
                     {
-                        ret = wcsrchr(res->filename, L'.');
+                        auto ret = wcsrchr(filename, L'.');
                         if (ret != nullptr) {
-                            res->extra = ret + 1;
+                            extra = ret + 1;
                         }
                         else {
-                            res->extra = TEXT(" ");
+                            extra = TEXT(" ");
                         }
                     }
                     else
                     {
-                        res->extra = TEXT(" ");
+                        extra = TEXT(" ");
                     }
+
+                    results.push_back({ icon, extra, filename, path, dataSize, allocatedSize });
+
                     /*item.pszText = LPSTR_TEXTCALLBACK;//(LPWSTR)PSEARCHFILEINFO(data)->FileName;
                     item.iItem	 = i;
                     item.iImage = PSEARCHFILEINFO(data)->Flags;
@@ -1203,11 +1214,11 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
                 //	ListView_SetItemText(hListView,last,1, LPSTR_TEXTCALLBACK);
 
                     hit++;
-                    if (results_cnt > 0xfff0)
+                    if (results.size() > MAX_RESULTS_NUMBER)
                     {
                         //int res;
                         //res = MessageBox(0, TEXT("Your search produces too many results!\nContinue your search?"), 0, MB_ICONINFORMATION | MB_TASKMODAL | MB_YESNO);
-                        MessageBox(hWnd, &szTooMany[0]/*TEXT("Your search produces too many results!")*/, nullptr, MB_ICONWARNING | MB_OK);
+                        MessageBox(hWnd, szTooMany/*TEXT("Your search produces too many results!")*/, nullptr, MB_ICONWARNING | MB_OK);
                         //if (res!=IDYES)
                         //{
                             //SendMessage(hListView, WM_SETREDRAW,TRUE,0);						
@@ -1394,7 +1405,7 @@ BOOL SaveResults(LPWSTR filename)
         return FALSE;
     }
 
-    for (int i = 0; i < results_cnt; i++)
+    for (int i = 0; i < results.size(); i++)
     {
         wcscpy(buff, results[i].path);
         wcscat(buff, results[i].filename);
@@ -1504,7 +1515,7 @@ void PrepareCopy(HWND hWnd, UINT flags)
     files.fWide = TRUE;
 
     auto buff = std::make_unique<TCHAR[]>(0x80000);
-    for (int i = 0; i < results_cnt; i++)
+    for (int i = 0; i < results.size(); i++)
     {
         UINT mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
         if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
@@ -1592,7 +1603,7 @@ void DeleteFiles(HWND hWnd, UINT flags)
 
     if (flags == DELETENOW)
     {
-        for (int i = 0; i < results_cnt; i++)
+        for (int i = 0; i < results.size(); i++)
         {
             mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
             if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
@@ -1620,7 +1631,7 @@ void DeleteFiles(HWND hWnd, UINT flags)
     }
     else if (flags == DELETEONREBOOT)
     {
-        for (int i = 0; i < results_cnt; i++)
+        for (int i = 0; i < results.size(); i++)
         {
             mask = ListView_GetItemState(hListView, i, LVIS_SELECTED);
             if (((mask & LVIS_SELECTED) != 0u) && ((results[i].icon & 0x001) != 0))
