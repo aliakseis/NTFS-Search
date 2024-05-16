@@ -111,8 +111,8 @@ void StartLoading(PDISKHANDLE disk, HWND hWnd);
 int ProcessLoading(HWND hWnd, HWND hCombo, int reload);
 
 DWORD WINAPI LoadSearchInfo(LPVOID lParam);
-int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEARCHP* pat);
-int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted);
+int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP* pat);
+int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted);
 UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags);
 UINT ExecuteFileEx(HWND hWnd, const LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags);
 
@@ -1038,7 +1038,7 @@ VOID ReleaseAllDisks()
     }
 }
 
-int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted)
+int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted)
 {
     DWORD ret = 0;
 
@@ -1089,7 +1089,7 @@ int Search(HWND hWnd, int disk, TCHAR *filename, BOOL deleted)
     return ret;
 }
 
-int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEARCHP* pat)
+int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP* pat)
 {
     int hit = 0;
     LVITEM item;
@@ -1107,7 +1107,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
 
     for (int i = 0; i < disk->filesSize; i++)
     {
-        if (deleted == TRUE || ((info[i].Flags & 0x1) != 0))
+        if (deleted || ((info[i].Flags & 0x1) != 0))
         {
             if (info[i].FileName != nullptr)
             {
@@ -1197,7 +1197,7 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, BOOL deleted, SEAR
                 //	ListView_SetItemText(hListView,last,1, LPSTR_TEXTCALLBACK);
 
                     hit++;
-                    if (results.size() > MAX_RESULTS_NUMBER)
+                    if (results.size() >= MAX_RESULTS_NUMBER)
                     {
                         //int res;
                         //res = MessageBox(0, TEXT("Your search produces too many results!\nContinue your search?"), 0, MB_ICONINFORMATION | MB_TASKMODAL | MB_YESNO);
