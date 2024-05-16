@@ -383,7 +383,7 @@ DWORD ReadMFTLCN(PDISKHANDLE disk, ULONGLONG lcn, ULONG count, PVOID buffer, FET
     return pos;
 }
 
-DWORD inline ProcessBuffer(PDISKHANDLE disk, PUCHAR buffer, DWORD size, FETCHPROC fetch)
+DWORD ProcessBuffer(PDISKHANDLE disk, PUCHAR buffer, DWORD size, FETCHPROC fetch)
 {
     auto end = PUCHAR(buffer) + size;
     SEARCHFILEINFO* data = disk->fFiles + disk->filesSize;
@@ -494,7 +494,7 @@ LPWSTR GetCompletePath(PDISKHANDLE disk, int id)
     return glPath;
 }
 
-VOID inline CallMe(PSTATUSINFO info, DWORD value)
+VOID CallMe(PSTATUSINFO info, DWORD value)
 {
     if (info != nullptr) {
         SendMessage(info->hWnd, PBM_SETPOS, value, 0);
@@ -503,7 +503,7 @@ VOID inline CallMe(PSTATUSINFO info, DWORD value)
 }
 
 
-BOOL inline FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO* data)
+BOOL FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO* data)
 {
     PFILENAME_ATTRIBUTE fn;
     auto attr = reinterpret_cast<PATTRIBUTE>(reinterpret_cast<PUCHAR>(file) + file->AttributesOffset);
