@@ -33,7 +33,7 @@ BOOL FreeHeap(PHEAPBLOCK block)
     return FALSE;
 }
 
-LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPTSTR string, DWORD size)
+LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPCTSTR string, DWORD size)
 {
     PHEAPBLOCK back = nullptr;
     PUCHAR ret = nullptr;

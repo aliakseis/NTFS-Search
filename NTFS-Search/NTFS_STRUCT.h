@@ -2,6 +2,7 @@
 
 #include "Heap.h"
 
+#include <string>
 
 /* BOOT_BLOCK
 
@@ -202,7 +203,7 @@ typedef struct {
 #define UNKNOWN 0xff99ff99
 
 
-typedef struct {
+struct SEARCHFILEINFO {
     LPCWSTR FileName;
     USHORT FileNameLength;
     USHORT Flags;
@@ -212,7 +213,7 @@ typedef struct {
     ULONGLONG AllocatedSize;
 
     char data[64];
-}SEARCHFILEINFO, *PSEARCHFILEINFO;
+};
 
 
 typedef struct {
@@ -284,8 +285,8 @@ PFILENAME_ATTRIBUTE FindFileName(PFILE_RECORD_HEADER file, USHORT type);
 DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info);
 
 
-LPWSTR GetPath(PDISKHANDLE disk, int id);
-LPWSTR GetCompletePath(PDISKHANDLE disk, int id);
+std::wstring GetPath(const PDISKHANDLE disk, int id);
+//LPWSTR GetCompletePath(PDISKHANDLE disk, int id);
 BOOL FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO* data);
 
 ULONG RunLength(PUCHAR run);

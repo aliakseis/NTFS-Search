@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 enum { MAX_LOADSTRING = 100 };
 
@@ -111,7 +112,7 @@ void StartLoading(PDISKHANDLE disk, HWND hWnd);
 int ProcessLoading(HWND hWnd, HWND hCombo, int reload);
 
 DWORD WINAPI LoadSearchInfo(LPVOID lParam);
-int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP* pat);
+int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP& pat);
 int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted);
 UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags);
 UINT ExecuteFileEx(HWND hWnd, const LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags);
@@ -1052,11 +1053,8 @@ int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted)
     //results_cnt = 0;
     results.clear();
 
-    SEARCHP* pat;
-
-
-    pat = StartSearch(filename, wcslen(filename));
-    if (pat == nullptr) {
+    auto pat = StartSearch(filename, wcslen(filename));
+    if (!pat) {
         return 0;
     }
 
@@ -1084,25 +1082,25 @@ int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted)
     //results_cnt = ret;
     ListView_SetItemCountEx(hListView, results.size(), 0);
     SendMessage(hListView, WM_SETREDRAW, TRUE, 0);
-    EndSearch(pat);
+    //EndSearch(pat);
 
     return ret;
 }
 
-int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP* pat)
+int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP& pat)
 {
     int hit = 0;
-    LVITEM item;
+    //LVITEM item;
     //PUCHAR data;
     WCHAR tmp[0xffff];
-    SEARCHFILEINFO *info;
     if (glSensitive == 0)
     {
         _wcslwr(filename);
     }
-    info = disk->fFiles;
+    const SEARCHFILEINFO* info = disk->fFiles;
 
-    memset(&item, 0, sizeof(item));
+    //memset(&item, 0, sizeof(item));
+    LVITEM item{};
     item.mask = LVIF_TEXT | LVIF_PARAM | LVIF_IMAGE;
 
     for (int i = 0; i < disk->filesSize; i++)
@@ -1130,39 +1128,11 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEAR
                     //if (StringRegCompare(tmp, PSEARCHFILEINFO(data)->FileNameLength, filename, len)==TRUE)
                 {
                     //SearchResult* res = &results[results_cnt++];
-                    const auto t = GetPath(disk, i);
-                    const auto s = wcslen(t);
                     const auto filename = const_cast<LPTSTR>(info[i].FileName);
-                    const auto path = AllocAndCopyString(PathStrings, t, s);
+                    const auto t = GetPath(disk, i);
+                    //const auto s = wcslen(t);
+                    const auto path = AllocAndCopyString(PathStrings, t.c_str(), t.length());
                     const auto icon = info[i].Flags;
-
-                    if (info[i].DataSize == 0 && info[i].Flags != 0x002) // not directory
-                    {
-                        WCHAR filePath[0x10000];
-                        PathCombineW(filePath, path, filename);
-                        HANDLE hFile = CreateFile(filePath,
-                            GENERIC_READ,
-                            FILE_SHARE_READ,
-                            NULL,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
-                            NULL);
-                        if (hFile != INVALID_HANDLE_VALUE)
-                        {
-                            FILE_STANDARD_INFO fileInfo {};
-                            if (GetFileInformationByHandleEx(
-                                hFile,
-                                FileStandardInfo,
-                                &fileInfo,
-                                sizeof(fileInfo)))
-                            {
-                                info[i].DataSize = fileInfo.EndOfFile.QuadPart;
-                                info[i].AllocatedSize = fileInfo.AllocationSize.QuadPart;
-                            }
-
-                            CloseHandle(hFile);
-                        }
-                    }
 
                     const auto dataSize = info[i].DataSize;
                     const auto allocatedSize = info[i].AllocatedSize;

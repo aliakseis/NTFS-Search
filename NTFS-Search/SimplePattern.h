@@ -8,8 +8,8 @@ struct SEARCHP
 	wchar_t* extra;
 	int extralen;
 	int totallen;
+    operator bool() const { return mode != -1; }
 };
 
-SEARCHP* StartSearch(wchar_t* string, int len);
-bool SearchStr(SEARCHP* pattern, wchar_t* string, int len);
-int EndSearch(SEARCHP* pattern);
+SEARCHP StartSearch(wchar_t* string, int len);
+bool SearchStr(SEARCHP& pattern, wchar_t* string, int len);

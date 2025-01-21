@@ -16,9 +16,9 @@ typedef struct HEAPBLOCK
 PHEAPBLOCK CreateHeap(DWORD size);
 BOOL FreeHeap(PHEAPBLOCK block);
 
-PUCHAR AllocData(PHEAPBLOCK block, DWORD size);
-LPTSTR AllocString(PHEAPBLOCK block, DWORD size);
-LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPTSTR string, DWORD size);
+//PUCHAR AllocData(PHEAPBLOCK block, DWORD size);
+//LPTSTR AllocString(PHEAPBLOCK block, DWORD size);
+LPTSTR AllocAndCopyString(PHEAPBLOCK block, LPCTSTR string, DWORD size);
 
 BOOL FreeAllBlocks(PHEAPBLOCK block);
 

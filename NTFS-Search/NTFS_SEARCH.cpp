@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "windows.h"
 #include "commctrl.h"
+#include "shlwapi.h"
 #include "FixList.h"
+
+#include <execution>
+#include <algorithm>
 
 // HEAPHeap
 PHEAPBLOCK currentBlock = nullptr;
@@ -223,6 +227,61 @@ PATTRIBUTE FindAttribute(PFILE_RECORD_HEADER file, ATTRIBUTE_TYPE type)
     return nullptr;
 }
 
+static void FixFileSizes(PDISKHANDLE disk)
+{
+    //SEARCHFILEINFO* info = disk->fFiles;
+    //for (int i = 0; i < disk->filesSize; i++)
+    std::for_each(std::execution::par, disk->fFiles, disk->fFiles + disk->filesSize,
+        [disk](SEARCHFILEINFO& info)
+        {
+            if (info.FileName != nullptr)
+            {
+                if (info.DataSize == 0 || info.AllocatedSize == 0)
+                {
+                    if ((info.Flags & 0x002) // directory
+                        || !(info.Flags & 0x1)) // deleted
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        const auto filename = const_cast<LPTSTR>(info.FileName);
+                        const int i = &info - disk->fFiles;
+                        const auto t = GetPath(disk, i);
+                        //const auto s = wcslen(t);
+                        //const auto path = AllocAndCopyString(PathStrings, t, s);
+
+                        WCHAR filePath[0x10000];
+                        PathCombineW(filePath, t.c_str(), filename);
+                        HANDLE hFile = CreateFile(filePath,
+                            GENERIC_READ,
+                            FILE_SHARE_READ,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+                        if (hFile != INVALID_HANDLE_VALUE)
+                        {
+                            FILE_STANDARD_INFO fileInfo{};
+                            if (GetFileInformationByHandleEx(
+                                hFile,
+                                FileStandardInfo,
+                                &fileInfo,
+                                sizeof(fileInfo)))
+                            {
+                                info.DataSize = fileInfo.EndOfFile.QuadPart;
+                                info.AllocatedSize = fileInfo.AllocationSize.QuadPart;
+                            }
+
+                            CloseHandle(hFile);
+                        }
+                    }
+                }
+
+            }
+        });
+}
+
 DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info)
 {
     if (disk == nullptr) {
@@ -251,6 +310,8 @@ DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info)
         }
 
         ProcessFixList(disk);
+
+        FixFileSizes(disk);
     }
 
     return 0;
@@ -268,8 +329,8 @@ DWORD ReadMFTParse(PDISKHANDLE disk, PNONRESIDENT_ATTRIBUTE attr, ULONGLONG vcn,
     //data = new UCHAR[x];
     //memset(data, 0, x);
     //disk->fFiles = (PSEARCHFILEINFO)data;
-    disk->fFiles = new SEARCHFILEINFO[x];
-    memset(disk->fFiles, 0, x * sizeof(SEARCHFILEINFO));
+    disk->fFiles = new SEARCHFILEINFO[x]();
+    //memset(disk->fFiles, 0, x * sizeof(SEARCHFILEINFO));
 
     for (left = count; left > 0; left -= readcount)
     {
@@ -403,22 +464,22 @@ DWORD ProcessBuffer(PDISKHANDLE disk, PUCHAR buffer, DWORD size, FETCHPROC fetch
     return 0;
 }
 
-LPWSTR GetPath(PDISKHANDLE disk, int id)
+std::wstring GetPath(const PDISKHANDLE disk, int id)
 {
     int a = id;
     //int i;
-    DWORD pt;
+    //DWORD pt;
     //PUCHAR ptr = (PUCHAR)disk->sFiles;
     DWORD PathStack[64];
     int PathStackPos = 0;
-    static WCHAR glPath[0xffff];
+    WCHAR glPath[0xffff];
     int CurrentPos = 0;
 
     PathStackPos = 0;
     for (int i = 0; i < 64; i++)
     {
         PathStack[PathStackPos++] = a;
-        pt = a*disk->IsLong;
+        auto pt = a*disk->IsLong;
         //a = PSEARCHFILEINFO(ptr+pt)->ParentId.LowPart;
         a = disk->fFiles[pt].ParentId.LowPart;
 
@@ -437,7 +498,7 @@ LPWSTR GetPath(PDISKHANDLE disk, int id)
     }
     for (int i = PathStackPos - 1; i > 0; i--)
     {
-        pt = PathStack[i] * disk->IsLong;
+        auto pt = PathStack[i] * disk->IsLong;
         glPath[CurrentPos++] = L'\\';
         //memcpy(&glPath[CurrentPos], PSEARCHFILEINFO(ptr+pt)->FileName, PSEARCHFILEINFO(ptr+pt)->FileNameLength*2);
         //CurrentPos+=PSEARCHFILEINFO(ptr+pt)->FileNameLength;
@@ -445,10 +506,11 @@ LPWSTR GetPath(PDISKHANDLE disk, int id)
         CurrentPos += disk->fFiles[pt].FileNameLength;
     }
     glPath[CurrentPos] = L'\\';
-    glPath[CurrentPos + 1] = L'\0';
-    return glPath;
+    //glPath[CurrentPos + 1] = L'\0';
+    return { glPath, glPath + CurrentPos };
 }
 
+/*
 LPWSTR GetCompletePath(PDISKHANDLE disk, int id)
 {
     int a = id;
@@ -493,6 +555,7 @@ LPWSTR GetCompletePath(PDISKHANDLE disk, int id)
     glPath[CurrentPos] = L'\0';
     return glPath;
 }
+*/
 
 VOID CallMe(PSTATUSINFO info, DWORD value)
 {
