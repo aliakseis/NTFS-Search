@@ -581,6 +581,9 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
         SendMessage(hCombo, CB_SETCURSEL, 0, 0);
         int parts[2] = { 250,-1 };
         SendMessage(hStatus, SB_SETPARTS, 2, (LPARAM)&parts);
+
+        SendDlgItemMessage(hWnd, IDC_DELETED, BM_SETCHECK, BST_CHECKED, 0);
+
         return TRUE;
     }
     case WM_SIZE:
@@ -867,7 +870,7 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                 GetDlgItemText(hWnd, IDC_EDIT, tmp, MAX_PATH);
 
                 int b = SendDlgItemMessage(hWnd, IDC_DELETED, BM_GETCHECK, 0, 0);
-                DWORD res = Search(hWnd, data, tmp, b == BST_CHECKED);
+                DWORD res = Search(hWnd, data, tmp, b != BST_CHECKED);
 
                 wsprintf(tmp, &szFound[0]/* TEXT("%d files found.")*/, res);
                 SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)tmp);
