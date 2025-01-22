@@ -6,6 +6,7 @@
 
 #include <execution>
 #include <algorithm>
+#include <cassert>
 
 // HEAPHeap
 PHEAPBLOCK currentBlock = nullptr;
@@ -282,6 +283,47 @@ static void FixFileSizes(PDISKHANDLE disk)
         });
 }
 
+static void CollectFolderSizes(PDISKHANDLE disk)
+{
+    SEARCHFILEINFO* info = disk->fFiles;
+    for (int i = 0; i < disk->filesSize; i++)
+    {
+        if (info[i].FileName != nullptr)
+        {
+            const auto dataSize = info[i].DataSize;
+            const auto allocatedSize = info[i].AllocatedSize;
+            if (dataSize != 0 || allocatedSize != 0)
+            {
+                if ((info[i].Flags & 0x002) // directory
+                    || !(info[i].Flags & 0x1)) // deleted
+                {
+                    continue;
+                }
+                else
+                {
+                    int a = i;
+                    for (int j = 0; j < 64; ++j)
+                    {
+                        a = disk->fFiles[a * disk->IsLong].ParentId.LowPart;
+                        if (a == 0 || a == 5) {
+                            break;
+                        }
+                        assert(a < disk->filesSize);
+                        auto pt = a * disk->IsLong;
+                        if ((info[pt].Flags & 0x002)) // directory
+                        {
+                            info[pt].DataSize += dataSize;
+                            info[pt].AllocatedSize += allocatedSize;
+                        }
+                    }
+                }
+            }
+
+        }
+
+    }
+}
+
 DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info)
 {
     if (disk == nullptr) {
@@ -312,6 +354,7 @@ DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info)
         ProcessFixList(disk);
 
         FixFileSizes(disk);
+        CollectFolderSizes(disk);
     }
 
     return 0;
@@ -471,11 +514,11 @@ std::wstring GetPath(const PDISKHANDLE disk, int id)
     //DWORD pt;
     //PUCHAR ptr = (PUCHAR)disk->sFiles;
     DWORD PathStack[64];
-    int PathStackPos = 0;
+    //int PathStackPos = 0;
     WCHAR glPath[0xffff];
     int CurrentPos = 0;
 
-    PathStackPos = 0;
+    int PathStackPos = 0;
     for (int i = 0; i < 64; i++)
     {
         PathStack[PathStackPos++] = a;
