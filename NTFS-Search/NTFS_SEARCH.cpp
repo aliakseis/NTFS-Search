@@ -232,7 +232,7 @@ static void FixFileSizes(PDISKHANDLE disk)
 {
     //SEARCHFILEINFO* info = disk->fFiles;
     //for (int i = 0; i < disk->filesSize; i++)
-    std::for_each(std::execution::par, disk->fFiles, disk->fFiles + disk->filesSize,
+    std::for_each(std::execution::par_unseq, disk->fFiles, disk->fFiles + disk->filesSize,
         [disk](SEARCHFILEINFO& info)
         {
             if (info.FileName != nullptr)
@@ -264,21 +264,23 @@ static void FixFileSizes(PDISKHANDLE disk)
                         if (hFile != INVALID_HANDLE_VALUE)
                         {
                             FILE_STANDARD_INFO fileInfo{};
-                            if (GetFileInformationByHandleEx(
+                            const auto ok = GetFileInformationByHandleEx(
                                 hFile,
                                 FileStandardInfo,
                                 &fileInfo,
-                                sizeof(fileInfo)))
+                                sizeof(fileInfo));
+
+                            CloseHandle(hFile);
+
+                            if (ok)
                             {
                                 info.DataSize = fileInfo.EndOfFile.QuadPart;
                                 info.AllocatedSize = fileInfo.AllocationSize.QuadPart;
                             }
 
-                            CloseHandle(hFile);
                         }
                     }
                 }
-
             }
         });
 }
@@ -613,7 +615,8 @@ BOOL FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO*
 {
     PFILENAME_ATTRIBUTE fn;
     auto attr = reinterpret_cast<PATTRIBUTE>(reinterpret_cast<PUCHAR>(file) + file->AttributesOffset);
-    int stop = min(8, file->NextAttributeNumber);
+    //int stop = min(8, file->NextAttributeNumber);
+    const int stop = file->NextAttributeNumber;
 
     bool fileNameFound = false;
     bool fileSizeFound = false;
@@ -670,8 +673,20 @@ BOOL FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO*
                     }
                     dataFound = true;
                 }
-            case ZeroValue: // falls through
+            //case ZeroValue: // falls through
                 if (AttributeLength(attr) > 0 || AttributeLengthAllocated(attr) > 0)
+                {
+                    data->DataSize = max(data->DataSize, AttributeLength(attr));
+                    data->AllocatedSize = max(data->AllocatedSize, AttributeLengthAllocated(attr));
+                    if (fileNameFound && dataFound) {
+                        return TRUE;
+                    }
+                    fileSizeFound = true;
+                }
+            break;
+            case ZeroValue: // falls through
+                if ((attr->AttributeNumber == 1 || attr->AttributeNumber == 3) &&
+                    (AttributeLength(attr) > 0 || AttributeLengthAllocated(attr) > 0))
                 {
                     data->DataSize = max(data->DataSize, AttributeLength(attr));
                     data->AllocatedSize = max(data->AllocatedSize, AttributeLengthAllocated(attr));
