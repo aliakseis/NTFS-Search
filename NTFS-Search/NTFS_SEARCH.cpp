@@ -228,13 +228,16 @@ PATTRIBUTE FindAttribute(PFILE_RECORD_HEADER file, ATTRIBUTE_TYPE type)
     return nullptr;
 }
 
-static void FixFileSizes(PDISKHANDLE disk)
+static void FixFileSizes(PDISKHANDLE disk, PSTATUSINFO status)
 {
     //SEARCHFILEINFO* info = disk->fFiles;
     //for (int i = 0; i < disk->filesSize; i++)
+    std::atomic_uint32_t count;
     std::for_each(std::execution::par_unseq, disk->fFiles, disk->fFiles + disk->filesSize,
-        [disk](SEARCHFILEINFO& info)
+        [disk, status, &count](SEARCHFILEINFO& info)
         {
+            const DWORD current = ++count;
+            UpdateProgress(status, current + disk->filesSize);
             if (info.FileName != nullptr)
             {
                 if (info.DataSize == 0 || info.AllocatedSize == 0)
@@ -355,7 +358,7 @@ DWORD ParseMFT(PDISKHANDLE disk, UINT option, PSTATUSINFO info)
 
         ProcessFixList(disk);
 
-        FixFileSizes(disk);
+        FixFileSizes(disk, info);
         CollectFolderSizes(disk);
     }
 
@@ -477,13 +480,13 @@ DWORD ReadMFTLCN(PDISKHANDLE disk, ULONGLONG lcn, ULONG count, PVOID buffer, FET
         pos += read;
 
         ProcessBuffer(disk, static_cast<PUCHAR>(buffer), read, fetch);
-        CallMe(info, disk->filesSize);
+        UpdateProgress(info, disk->filesSize, disk->NTFS.entryCount + disk->filesSize);
 
     }
 
     ReadFile(disk->fileHandle, buffer, (count - c)*disk->NTFS.BytesPerCluster, &read, nullptr);
     ProcessBuffer(disk, static_cast<PUCHAR>(buffer), read, fetch);
-    CallMe(info, disk->filesSize);
+    UpdateProgress(info, disk->filesSize, disk->NTFS.entryCount + disk->filesSize);
 
     pos += read;
     return pos;
@@ -602,9 +605,12 @@ LPWSTR GetCompletePath(PDISKHANDLE disk, int id)
 }
 */
 
-VOID CallMe(PSTATUSINFO info, DWORD value)
+VOID UpdateProgress(PSTATUSINFO info, DWORD value, DWORD total)
 {
     if (info != nullptr) {
+        if (total != 0)
+            SendMessage(info->hWnd, PBM_SETRANGE32, 0, total);
+
         SendMessage(info->hWnd, PBM_SETPOS, value, 0);
     }
 

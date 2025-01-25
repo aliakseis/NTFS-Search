@@ -254,7 +254,7 @@ typedef struct
 	DWORD Value;
 }STATUSINFO, *PSTATUSINFO;
 
-VOID CallMe(PSTATUSINFO info, DWORD value);
+VOID UpdateProgress(PSTATUSINFO info, DWORD value, DWORD total = 0);
 
 /* MY FUNCTIONS
 

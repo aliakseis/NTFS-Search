@@ -27,6 +27,7 @@
 #include <memory>
 #include <vector>
 #include <cassert>
+#include <sstream>
 
 enum { MAX_LOADSTRING = 100 };
 
@@ -687,8 +688,19 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
                         case 0: info->item.pszText = res->filename; break;
                         case 1: info->item.pszText = res->extra; break;
                         case 2: info->item.pszText = res->path; break;
-                        case 3: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->dataSize); break;
-                        case 4: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->allocatedSize); break;
+                            //case 3: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->dataSize); break;
+                            //case 4: _stprintf_s(info->item.pszText, info->item.cchTextMax, _T("%llu"), res->allocatedSize); break;
+                        case 3: case 4:
+                        {
+                            // Create a stringstream and imbue it with the locale
+                            std::basic_stringstream<TCHAR> ss;
+                            ss.imbue(std::locale(""));
+
+                            // Use the numpunct facet to format the number with thousands separators
+                            ss << std::fixed << ((info->item.iSubItem == 3) ? res->dataSize : res->allocatedSize);
+                            _tcscpy_s(info->item.pszText, info->item.cchTextMax, ss.str().c_str());
+                        }
+                        break;
                         }
                     }
 
@@ -998,10 +1010,10 @@ INT_PTR CALLBACK Waiting(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
             static ThreadInfo info;
             info.disk = (PDISKHANDLE)lParam;
             info.hWnd = hDlg;
-            DWORD range;
+            //DWORD range;
             wsprintf(tmp, &szLoading[0]/*TEXT("Loading %C:\\ ... - Please wait")*/, info.disk->DosDevice);
             SetWindowText(hDlg, tmp);
-            range = SendDlgItemMessage(hDlg, IDC_PROGRESS, PBM_GETRANGE, TRUE, NULL);
+            //range = SendDlgItemMessage(hDlg, IDC_PROGRESS, PBM_GETRANGE, TRUE, NULL);
             //handle = CreateThread(NULL, 0, LoadSearchInfo, (LPVOID) &info, 0, &threadId); 
             handle = (HANDLE)_beginthreadex(nullptr, 0, reinterpret_cast<unsigned int(__stdcall*)(void*)>(LoadSearchInfo), (LPVOID)&info, 0, reinterpret_cast<unsigned int*>(&threadId));
 
