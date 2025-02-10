@@ -20,7 +20,7 @@
 #include "objidl.h"
 #include "shlobj.h"
 #include "shlwapi.h"
-#include "SimplePattern.h"
+#include "wildcards.hpp"
 #include "process.h"
 
 #include <algorithm>
@@ -113,13 +113,13 @@ void StartLoading(PDISKHANDLE disk, HWND hWnd);
 int ProcessLoading(HWND hWnd, HWND hCombo, int reload);
 
 DWORD WINAPI LoadSearchInfo(LPVOID lParam);
-int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP& pat);
+int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, LPCTSTR pat);
 int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted);
 UINT ExecuteFile(HWND hWnd, LPWSTR str, USHORT flags);
 UINT ExecuteFileEx(HWND hWnd, const LPTSTR command, LPWSTR str, LPCTSTR dir, UINT show, USHORT flags);
 
 BOOL UnloadDisk(HWND hWnd, int index);
-BOOL SearchString(LPWSTR pattern, int length, LPWSTR string, int len);
+//BOOL SearchString(LPWSTR pattern, int length, LPWSTR string, int len);
 
 int filecompare(const void *arg1, const void *arg2);
 int pathcompare(const void *arg1, const void *arg2);
@@ -1068,28 +1068,33 @@ int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted)
     //results_cnt = 0;
     results.clear();
 
-    auto pat = StartSearch(filename, wcslen(filename));
-    if (!pat) {
-        return 0;
-    }
+    //auto pat = StartSearch(filename, wcslen(filename));
+    //if (!pat) {
+    //    return 0;
+    //}
 
 
-    if (disk > 0 && disk < 32)
-    {
-        if (disks[disk] != nullptr)
+    try {
+        if (disk > 0 && disk < 32)
         {
-            ret = SearchFiles(hWnd, disks[disk], filename, deleted, pat);
-        }
-    }
-    else
-    {
-        for (auto & disk : disks)
-        {
-            if (disk != nullptr && results.size() < MAX_RESULTS_NUMBER)
+            if (disks[disk] != nullptr)
             {
-                ret += SearchFiles(hWnd, disk, filename, deleted, pat);
+                ret = SearchFiles(hWnd, disks[disk], filename, deleted, filename);
             }
         }
+        else
+        {
+            for (auto& disk : disks)
+            {
+                if (disk != nullptr && results.size() < MAX_RESULTS_NUMBER)
+                {
+                    ret += SearchFiles(hWnd, disk, filename, deleted, filename);
+                }
+            }
+        }
+    }
+    catch (...) {
+        return 0;
     }
     if (ret != results.size()) {
         DebugBreak();
@@ -1102,17 +1107,22 @@ int Search(HWND hWnd, int disk, TCHAR *filename, bool deleted)
     return ret;
 }
 
-int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEARCHP& pat)
+int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, LPCTSTR pat)
 {
     int hit = 0;
     //LVITEM item;
     //PUCHAR data;
-    WCHAR tmp[0xffff];
+    WCHAR tmp[0x10000];
     if (glSensitive == 0)
     {
         _wcslwr(filename);
     }
     const SEARCHFILEINFO* info = disk->fFiles;
+
+    const bool fullPath = _tcschr(pat, _T('/')) != nullptr;
+
+    const auto v = std::wstring_view(pat);
+    auto matcher = wildcards::make_matcher(v);
 
     //memset(&item, 0, sizeof(item));
     LVITEM item{};
@@ -1124,18 +1134,27 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEAR
         {
             if (info[i].FileName != nullptr)
             {
+                const auto t = GetPath(disk, i);
                 bool ok;
-                if (glSensitive == 0)
+                if (glSensitive == 0 || fullPath)
                 {
                     //MessageBox(0,PSEARCHFILEINFO(data)->FileName,0,0);
                     //wcscpy_s(tmp,info->FileName, info->FileNameLength);
-                    memcpy(tmp, info[i].FileName, info[i].FileNameLength * sizeof(TCHAR) + 2);
-                    _wcslwr(tmp);
-                    ok = SearchStr(pat, (wchar_t*)tmp, info[i].FileNameLength);
+                    if (fullPath)
+                    {
+                        PathCombineW(tmp, t.c_str(), info[i].FileName);
+                        for (auto p = _tcschr(tmp, _T('\\')); p; p = _tcschr(p + 1, _T('\\')))
+                            *p = _T('/');
+                    }
+                    else
+                        memcpy(tmp, info[i].FileName, info[i].FileNameLength * sizeof(TCHAR) + 2);
+                    if (glSensitive == 0)
+                        _wcslwr(tmp);
+                    ok = matcher.matches(std::wstring_view(tmp));
                 }
                 else
                 {
-                    ok = SearchStr(pat, const_cast<wchar_t*>(info[i].FileName), info[i].FileNameLength);
+                    ok = matcher.matches(std::wstring_view(info[i].FileName));
                 }
                 if (ok)
                     //if (wcsstr(tmp, filename)!=NULL)
@@ -1144,7 +1163,6 @@ int SearchFiles(HWND hWnd, PDISKHANDLE disk, TCHAR *filename, bool deleted, SEAR
                 {
                     //SearchResult* res = &results[results_cnt++];
                     const auto filename = const_cast<LPTSTR>(info[i].FileName);
-                    const auto t = GetPath(disk, i);
                     //const auto s = wcslen(t);
                     const auto path = AllocAndCopyString(PathStrings, t.c_str(), t.length());
                     const auto icon = info[i].Flags;
