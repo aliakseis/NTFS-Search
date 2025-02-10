@@ -555,7 +555,7 @@ std::wstring GetPath(const PDISKHANDLE disk, int id)
     }
     glPath[CurrentPos] = L'\\';
     //glPath[CurrentPos + 1] = L'\0';
-    return { glPath, glPath + CurrentPos };
+    return { glPath, glPath + CurrentPos + 1 };
 }
 
 /*
