@@ -1579,6 +1579,23 @@ void PrepareCopy(HWND hWnd, UINT flags)
     }
 }
 
+static bool DeleteDirectoryAndAllSubfolders(LPCWSTR wzDirectory)
+{
+    WCHAR szDir[0x10000];  // +1 for the double null terminate
+    SHFILEOPSTRUCTW fos = { 0 };
+
+    //StringCchCopy(szDir, MAX_PATH, wzDirectory);
+    int len = lstrlenW(wzDirectory);
+    memcpy(szDir, wzDirectory, (len + 1) * sizeof(WCHAR));
+    szDir[len + 1] = 0; // double null terminate for SHFileOperation
+
+    // delete the folder and everything inside
+    fos.wFunc = FO_DELETE;
+    fos.pFrom = szDir;
+    fos.fFlags = FOF_NO_UI;
+    return SHFileOperation(&fos) == 0;
+}
+
 void DeleteFiles(HWND hWnd, UINT flags)
 {
     DWORD res;
@@ -1604,7 +1621,9 @@ void DeleteFiles(HWND hWnd, UINT flags)
                 res = MessageBox(hWnd, buff, szWarning/*TEXT("WARNING")*/, MB_YESNOCANCEL | MB_ICONWARNING | MB_DEFBUTTON2);
                 if (res == IDYES)
                 {
-                    if (!DeleteFile(path))
+                    const bool ok = PathIsDirectory(path)
+                        ? DeleteDirectoryAndAllSubfolders(path) : DeleteFile(path);
+                    if (!ok)
                     {
                         ShowError();
                     }
