@@ -1623,7 +1623,15 @@ void DeleteFiles(HWND hWnd, UINT flags)
                 {
                     const bool ok = PathIsDirectory(path)
                         ? DeleteDirectoryAndAllSubfolders(path) : DeleteFile(path);
-                    if (!ok)
+                    if (ok)
+                    {
+                        if (ListView_DeleteItem(hListView, i))
+                        {
+                            results.erase(results.begin() + i);
+                            --i;
+                        }
+                    }
+                    else
                     {
                         ShowError();
                     }
@@ -1651,7 +1659,15 @@ void DeleteFiles(HWND hWnd, UINT flags)
                 res = MessageBox(hWnd, buff, szWarning/*TEXT("WARNING")*/, MB_YESNOCANCEL | MB_ICONWARNING | MB_DEFBUTTON2);
                 if (res == IDYES)
                 {
-                    if (!MoveFileEx(path, nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))
+                    if (MoveFileEx(path, nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))
+                    {
+                        if (ListView_DeleteItem(hListView, i))
+                        {
+                            results.erase(results.begin() + i);
+                            --i;
+                        }
+                    }
+                    else
                     {
                         ShowError();
                     }
