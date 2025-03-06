@@ -691,6 +691,10 @@ BOOL FetchSearchInfo(PDISKHANDLE disk, PFILE_RECORD_HEADER file, SEARCHFILEINFO*
                 }
             break;
             case ZeroValue: // falls through
+                // AttributeNumber = 1 corresponds to the $STANDARD_INFORMATION attribute.
+                // This attribute contains essential metadata about the file.
+                // AttributeNumber = 3 corresponds to the $DATA attribute.
+                // This attribute contains the actual data of the file. For most files, this is the primary attribute that holds the file's content.
                 if ((attr->AttributeNumber == 1 || attr->AttributeNumber == 3) &&
                     (AttributeLength(attr) > 0 || AttributeLengthAllocated(attr) > 0))
                 {
