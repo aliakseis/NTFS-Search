@@ -475,19 +475,25 @@ LRESULT CALLBACK	SearchDlg(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam
         hListView = GetDlgItem(hWnd, IDC_RESULT);
         hCombo = GetDlgItem(hWnd, IDC_DRIVES);
 
-        if (GetDllVersion(TEXT("comctl32.dll")) >= PACKVERSION(6, 0))
-        {
-            //Proceed.
-            ListView_SetExtendedListViewStyle(hListView, LVS_EX_DOUBLEBUFFER);
-            hStatus = CreateWindowEx(WS_EX_COMPOSITED, STATUSCLASSNAME, nullptr, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP, 20, 20, 100, 100, hWnd, nullptr, hInst, nullptr);
+        ListView_SetExtendedListViewStyleEx(
+            hListView,
+            LVS_EX_DOUBLEBUFFER |
+            LVS_EX_FULLROWSELECT |
+            LVS_EX_LABELTIP,
+            LVS_EX_DOUBLEBUFFER |
+            LVS_EX_FULLROWSELECT |
+            LVS_EX_LABELTIP);
 
-        }
-        else
-        {
-            // Use an alternate approach for older DLL versions.
-            hStatus = CreateWindowEx(0, STATUSCLASSNAME, nullptr, WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP, 20, 20, 100, 100, hWnd, nullptr, hInst, nullptr);
-
-        }
+        hStatus = CreateWindowEx(
+            0,
+            STATUSCLASSNAME,
+            nullptr,
+            WS_CHILD | WS_VISIBLE | SBARS_SIZEGRIP,
+            20, 20, 100, 100,
+            hWnd,
+            nullptr,
+            hInst,
+            nullptr);
 
         LVCOLUMN col;
 
@@ -1753,8 +1759,26 @@ DWORD ShowError()
 int ProcessLoading(HWND hWnd, HWND hCombo, int reload)
 {
     EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
-    int index = SendMessage(hCombo, CB_GETCURSEL, 0, 0);
-    int data = SendMessage(hCombo, CB_GETITEMDATA, index, 0);
+
+
+    // Reset UI state
+    SendMessage(hListView, WM_SETREDRAW, FALSE, 0);
+
+    results.clear();
+
+    ReUseBlocks(PathStrings, FALSE);
+    ReUseBlocks(FileStrings, FALSE);
+
+    ListView_SetItemCountEx(hListView, 0, 0);
+
+    SendMessage(hStatus, SB_SETTEXT, 0, (LPARAM)TEXT(""));
+    SendMessage(hStatus, SB_SETTEXT, 1, (LPARAM)TEXT(""));
+
+    SendMessage(hListView, WM_SETREDRAW, TRUE, 0);
+    InvalidateRect(hListView, nullptr, TRUE);
+
+    const int index = SendMessage(hCombo, CB_GETCURSEL, 0, 0);
+    const int data = SendMessage(hCombo, CB_GETITEMDATA, index, 0);
 
     if (data > 0 && data < 32)
     {
